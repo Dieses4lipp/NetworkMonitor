@@ -1,0 +1,6 @@
+@NetworkMonitor_HostAddress = http://localhost:5212
+
+GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/
+Accept: application/json
+
+###
