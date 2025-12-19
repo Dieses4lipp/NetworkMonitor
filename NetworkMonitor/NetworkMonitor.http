@@ -1,6 +1,11 @@
 @NetworkMonitor_HostAddress = http://localhost:5212
 
-GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/
+GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/fritz
+Accept: application/json
+
+###
+
+GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/scan
 Accept: application/json
 
 ###
