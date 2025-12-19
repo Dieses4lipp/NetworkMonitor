@@ -1,7 +1,10 @@
 using NetworkMonitor;
+using RS.Fritz.Manager.API;
 
 var builder = WebApplication.CreateBuilder(args);
-
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddFritzApi();
 // Add services to the container.
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

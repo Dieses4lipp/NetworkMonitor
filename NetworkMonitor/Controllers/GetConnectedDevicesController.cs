@@ -1,16 +1,40 @@
-
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using RS.Fritz.Manager.API;
 
-namespace NetworkMonitor.Controllers
+namespace NetworkMonitor.Controllers 
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class GetConnectedDevicesController : ControllerBase
+    [ApiController] 
+    [Route("[controller]")] 
+    public class GetConnectedDevicesController : ControllerBase 
     {
-        [HttpGet(Name = "GetConnectedDevices")]
+        // service for device discovery
+        private readonly IDeviceSearchService _deviceSearchService;
+        // service for host retrieval
+        private readonly IDeviceHostsService _deviceHostsService; 
+
+        private readonly IConfiguration _configuration;
+
+        public GetConnectedDevicesController(
+            // injected discovery service
+            IDeviceSearchService deviceSearchService,
+            // injected hosts service
+            IDeviceHostsService deviceHostsService,
+            // injected configuration for secrets
+            IConfiguration configuration)
+        {
+            // assign discovery service
+            _deviceSearchService = deviceSearchService;
+            // assign hosts service
+            _deviceHostsService = deviceHostsService;
+            // assign configuration
+            _configuration = configuration;
+        }
+
+        [HttpGet("scan", Name = "GetConnectedDevicesWithIpScan")]
         public void Get()
         {
             Console.WriteLine("hit");
@@ -45,6 +69,85 @@ namespace NetworkMonitor.Controllers
                 PingReply ping = new Ping().Send(gatewayPrefix + i);
                 Console.WriteLine($"{ping.Status}");
 
+            }
+        }
+
+
+        [HttpGet("fritz", Name = "GetConnectedDevices")]
+        // async action returning HTTP result
+        public async Task<IActionResult> GetDevices() 
+        {
+            try
+            {
+                // log starting search
+                Console.WriteLine("Searching for Fritz!Box devices..."); 
+
+                // Search for routers and take the first one
+                var devices = await _deviceSearchService.GetInternetGatewayDevicesAsync();
+                // pick first group
+                var groupedDevice = devices.FirstOrDefault();
+                // no device found
+                if (groupedDevice == null) 
+                {
+                    return NotFound("No Fritz!Box device found on the network"); 
+                }
+
+                // Select the router's internal AVM (FritzBox) device
+                InternetGatewayDevice device = groupedDevice.Devices.FirstOrDefault(q => q.IsAvm);
+                // no AVM device
+                if (device == null) 
+                {
+                    return NotFound("No AVM device found"); 
+                }
+
+                Console.WriteLine($"Found device: {device.UPnPDescription?.Device?.ModelDescription}"); 
+
+                // Initialize the device for TR-064
+                await device.InitializeAsync();
+
+                // Set credentials
+                string username = _configuration["fritzboxuser"] ?? string.Empty;
+                string password = _configuration["fritzboxpassword"] ?? string.Empty;
+
+                // apply credentials
+                device.NetworkCredential = new NetworkCredential(username, password);
+                // log retrieval start
+                Console.WriteLine("Retrieving device hosts...");
+
+                // Get all connected devices
+                DeviceHostInfo deviceHostInfo = await _deviceHostsService.GetDeviceHostsAsync(device);
+                
+                var onlineDevices = deviceHostInfo.DeviceHosts 
+                    // filter active hosts
+                    .Where(h => h.Active) 
+                    .Select(h => new 
+                    {
+                        hostname = h.HostName,
+                        ip = h.IpAddress, 
+                        mac = h.MacAddress, 
+                        interfaceType = h.InterfaceType,
+                        active = h.Active
+                    })
+                    .ToList();
+
+                Console.WriteLine($"Found {onlineDevices.Count} online devices out of {deviceHostInfo.DeviceHosts.Count()} total");
+
+                foreach (var dev in onlineDevices) 
+                {
+                    Console.WriteLine($"{dev.hostname} | IP: {dev.ip} | MAC: {dev.mac}"); 
+                }
+
+                return Ok(new
+                {
+                    totalDevices = deviceHostInfo.DeviceHosts.Count(),
+                    onlineDevices = onlineDevices.Count,
+                    devices = onlineDevices 
+                });
+            }
+            catch (Exception ex) 
+            {
+                Console.WriteLine($"GetDevices error: {ex}"); 
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace }); 
             }
         }
     }
