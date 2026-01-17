@@ -126,7 +126,9 @@ namespace NetworkMonitor.Controllers
                         ip = h.IpAddress, 
                         mac = h.MacAddress, 
                         interfaceType = h.InterfaceType,
-                        active = h.Active
+                        active = h.Active,
+                        speed = h.Speed
+
                     })
                     .ToList();
 
@@ -134,7 +136,7 @@ namespace NetworkMonitor.Controllers
 
                 foreach (var dev in onlineDevices) 
                 {
-                    Console.WriteLine($"{dev.hostname} | IP: {dev.ip} | MAC: {dev.mac}"); 
+                    Console.WriteLine($"{dev.hostname} | IP: {dev.ip} | MAC: {dev.mac} | Speed: {dev.speed}"); 
                 }
 
                 return Ok(new
@@ -149,6 +151,15 @@ namespace NetworkMonitor.Controllers
                 Console.WriteLine($"GetDevices error: {ex}"); 
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace }); 
             }
+        }
+
+
+        [HttpGet("mesh")]
+        public async Task<IActionResult> GetMeshTopology()
+        {
+            
+
+            return Ok();
         }
     }
 }
