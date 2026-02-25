@@ -158,11 +158,5 @@ namespace NetworkMonitor.Controllers
                 return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
-
-        [HttpGet("mesh")]
-        public async Task<IActionResult> GetMeshTopology()
-        {
-
-        }
     } 
 } 

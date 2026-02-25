@@ -10,8 +10,18 @@
   <ItemGroup>
     <PackageReference Include="Lextm.SharpSnmpLib" Version="12.5.7" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="RS.Fritz.Manager.API" Version="2.8.6" />
-    <PackageReference Include="System.Net.NetworkInformation" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\NetworkMonitor.Application\NetworkMonitor.Application.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NetworkMonitor.Infrastructure.Data\NetworkMonitor.Infrastructure.Data.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NetworkMonitor.Infrastructure.Monitoring\NetworkMonitor.Infrastructure.Monitoring.csproj" />
   </ItemGroup>
 
 </Project>
