@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Security;
 using NetworkMonitor;
 using RS.Fritz.Manager.API;
 
@@ -9,7 +11,14 @@ builder.Services.AddFritzApi();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
+ServicePointManager.ServerCertificateValidationCallback =
+    delegate (object sender,
+              System.Security.Cryptography.X509Certificates.X509Certificate certificate,
+              System.Security.Cryptography.X509Certificates.X509Chain chain,
+              SslPolicyErrors sslPolicyErrors)
+    {
+        return true;
+    };
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

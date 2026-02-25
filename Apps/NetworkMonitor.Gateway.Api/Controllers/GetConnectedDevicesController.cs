@@ -5,16 +5,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RS.Fritz.Manager.API;
 
-namespace NetworkMonitor.Controllers 
+namespace NetworkMonitor.Controllers
 {
-    [ApiController] 
-    [Route("[controller]")] 
-    public class GetConnectedDevicesController : ControllerBase 
+    [ApiController]
+    [Route("[controller]")]
+    public class GetConnectedDevicesController : ControllerBase
     {
         // service for device discovery
         private readonly IDeviceSearchService _deviceSearchService;
         // service for host retrieval
-        private readonly IDeviceHostsService _deviceHostsService; 
+        private readonly IDeviceHostsService _deviceHostsService;
+
+        private readonly IDeviceMeshService _deviceMeshService;
 
         private readonly IConfiguration _configuration;
 
@@ -23,6 +25,7 @@ namespace NetworkMonitor.Controllers
             IDeviceSearchService deviceSearchService,
             // injected hosts service
             IDeviceHostsService deviceHostsService,
+            IDeviceMeshService deviceMeshService,
             // injected configuration for secrets
             IConfiguration configuration)
         {
@@ -30,6 +33,8 @@ namespace NetworkMonitor.Controllers
             _deviceSearchService = deviceSearchService;
             // assign hosts service
             _deviceHostsService = deviceHostsService;
+
+            _deviceMeshService = deviceMeshService;
             // assign configuration
             _configuration = configuration;
         }
@@ -58,7 +63,8 @@ namespace NetworkMonitor.Controllers
             if (lastdot >= 0)
             {
                 gatewayPrefix = gatewayString.Substring(0, lastdot + 1);
-            }else
+            }
+            else
             {
                 gatewayPrefix = gatewayString;
             }
@@ -75,32 +81,32 @@ namespace NetworkMonitor.Controllers
 
         [HttpGet("fritz", Name = "GetConnectedDevices")]
         // async action returning HTTP result
-        public async Task<IActionResult> GetDevices() 
+        public async Task<IActionResult> GetDevices()
         {
             try
             {
                 // log starting search
-                Console.WriteLine("Searching for Fritz!Box devices..."); 
+                Console.WriteLine("Searching for Fritz!Box devices...");
 
                 // Search for routers and take the first one
                 var devices = await _deviceSearchService.GetInternetGatewayDevicesAsync();
                 // pick first group
                 var groupedDevice = devices.FirstOrDefault();
                 // no device found
-                if (groupedDevice == null) 
+                if (groupedDevice == null)
                 {
-                    return NotFound("No Fritz!Box device found on the network"); 
+                    return NotFound("No Fritz!Box device found on the network");
                 }
 
                 // Select the router's internal AVM (FritzBox) device
                 InternetGatewayDevice device = groupedDevice.Devices.FirstOrDefault(q => q.IsAvm);
                 // no AVM device
-                if (device == null) 
+                if (device == null)
                 {
-                    return NotFound("No AVM device found"); 
+                    return NotFound("No AVM device found");
                 }
 
-                Console.WriteLine($"Found device: {device.UPnPDescription?.Device?.ModelDescription}"); 
+                Console.WriteLine($"Found device: {device.UPnPDescription?.Device?.ModelDescription}");
 
                 // Initialize the device for TR-064
                 await device.InitializeAsync();
@@ -116,39 +122,47 @@ namespace NetworkMonitor.Controllers
 
                 // Get all connected devices
                 DeviceHostInfo deviceHostInfo = await _deviceHostsService.GetDeviceHostsAsync(device);
-                
-                var onlineDevices = deviceHostInfo.DeviceHosts 
+
+                var onlineDevices = deviceHostInfo.DeviceHosts
                     // filter active hosts
-                    .Where(h => h.Active) 
-                    .Select(h => new 
+                    .Where(h => h.Active)
+                    .Select(h => new
                     {
                         hostname = h.HostName,
-                        ip = h.IpAddress, 
-                        mac = h.MacAddress, 
+                        ip = h.IpAddress,
+                        mac = h.MacAddress,
                         interfaceType = h.InterfaceType,
-                        active = h.Active
+                        active = h.Active,
+                        speed = h.Speed
+
                     })
                     .ToList();
 
                 Console.WriteLine($"Found {onlineDevices.Count} online devices out of {deviceHostInfo.DeviceHosts.Count()} total");
 
-                foreach (var dev in onlineDevices) 
+                foreach (var dev in onlineDevices)
                 {
-                    Console.WriteLine($"{dev.hostname} | IP: {dev.ip} | MAC: {dev.mac}"); 
+                    Console.WriteLine($"{dev.hostname} | IP: {dev.ip} | MAC: {dev.mac} | Speed: {dev.speed}");
                 }
 
                 return Ok(new
                 {
                     totalDevices = deviceHostInfo.DeviceHosts.Count(),
                     onlineDevices = onlineDevices.Count,
-                    devices = onlineDevices 
+                    devices = onlineDevices
                 });
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                Console.WriteLine($"GetDevices error: {ex}"); 
-                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace }); 
+                Console.WriteLine($"GetDevices error: {ex}");
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
-    }
-}
+
+        [HttpGet("mesh")]
+        public async Task<IActionResult> GetMeshTopology()
+        {
+
+        }
+    } 
+} 
