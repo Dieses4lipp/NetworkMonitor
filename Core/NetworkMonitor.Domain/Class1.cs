@@ -1,4 +1,4 @@
-﻿namespace NetworkMonitor_
+﻿namespace NetworkMonitor.Domain
 {
     public class Class1
     {

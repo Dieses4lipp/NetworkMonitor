@@ -1,8 +1,8 @@
 <Solution>
   <Project Path="Apps/NetworkMonitor.Agent/NetworkMonitor.Agent.csproj" Id="a28d66da-b36c-4928-9af9-1e41fed7eb5b" />
+  <Project Path="Apps/NetworkMonitor.Gateway.Api/NetworkMonitor.Gateway.Api.csproj" />
   <Project Path="Core/NetworkMonitor.Application/NetworkMonitor.Application.csproj" Id="51a6ea81-2980-4bf6-b63b-5a2c52c0fe69" />
   <Project Path="Core/NetworkMonitor.Domain/NetworkMonitor.Domain.csproj" Id="96acb359-14fe-4274-bfe1-bac52b64ca7b" />
   <Project Path="Infrastructure/NetworkMonitor.Infrastructure.Data/NetworkMonitor.Infrastructure.Data.csproj" Id="da9e2287-b157-4760-bea5-8d02c68dfcb7" />
-  <Project Path="Infrastructure/NetworkMonitor.Infrastructure.Monitoring/NetworkMonitor.Infrastructure.Monitoring.csproj" Id="757d57e9-e615-40de-8369-44a554872c95" />
-  <Project Path="Apps/NetworkMonitor.Gateway.Api/NetworkMonitor.Gateway.Api.csproj" />
+  <Project Path="Infrastructure/NetworkMonitor.Infrastructure.Monitoring/NetworkMonitor.Infrastructure.Monitoring.csproj" Id="b6f743a9-8e01-4265-b225-11d946342e12" />
 </Solution>
