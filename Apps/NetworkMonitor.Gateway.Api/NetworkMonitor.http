@@ -9,3 +9,11 @@ GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/scan
 Accept: application/json
 
 ###
+GET {{NetworkMonitor_HostAddress}}/GetConnectedDevices/mesh
+Accept: application/json
+
+###
+GET {{NetworkMonitor_HostAddress}}/agent/jobs
+
+###
+GET {{NetworkMonitor_HostAddress}}/devices/1000
