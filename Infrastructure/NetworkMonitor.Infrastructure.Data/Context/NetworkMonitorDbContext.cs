@@ -1,38 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 
 namespace NetworkMonitor.Infrastructure.Data.Context;
 
-public partial class MyDbContext : DbContext
+public class NetworkMonitorDbContext : DbContext
 {
-    public MyDbContext()
+    public NetworkMonitorDbContext()
     {
     }
 
-    public MyDbContext(DbContextOptions<MyDbContext> options)
+    public NetworkMonitorDbContext(DbContextOptions<NetworkMonitorDbContext> options)
         : base(options)
     {
     }
 
+    // Monitoring entities
     public virtual DbSet<Agent> Agents { get; set; }
-
     public virtual DbSet<Device> Devices { get; set; }
-
     public virtual DbSet<MonitoringJob> MonitoringJobs { get; set; }
-
     public virtual DbSet<RawMetric> RawMetrics { get; set; }
 
+    // Network discovery entities
+    public virtual DbSet<NetworkDevice> NetworkDevices { get; set; }
+    public virtual DbSet<NetworkScan> NetworkScans { get; set; }
+    public virtual DbSet<DeviceHistory> DeviceHistories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Configure Agent relationships
         modelBuilder.Entity<Agent>()
-    .HasMany(a => a.Devices)
-    .WithOne(d => d.Agent)
-    .HasForeignKey(d => d.AgentId)
-    .OnDelete(DeleteBehavior.Cascade);
+            .HasMany(a => a.Devices)
+            .WithOne(d => d.Agent)
+            .HasForeignKey(d => d.AgentId)
+            .OnDelete(DeleteBehavior.Cascade);
 
+        // Configure Device relationships
         modelBuilder.Entity<Device>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Devices_pkey");
@@ -42,6 +44,7 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("FK_Devices_Agents");
         });
 
+        // Configure MonitoringJob relationships
         modelBuilder.Entity<MonitoringJob>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("MonitoringJobs_pkey");
@@ -54,6 +57,7 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("FK_Jobs_Devices");
         });
 
+        // Configure RawMetric relationships
         modelBuilder.Entity<RawMetric>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("RawMetrics_pkey");
@@ -69,8 +73,34 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("FK_Metrics_Jobs");
         });
 
-        OnModelCreatingPartial(modelBuilder);
-    }
+        // Configure NetworkDevice
+        modelBuilder.Entity<NetworkDevice>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.IPAddress).IsRequired().HasMaxLength(15);
+            entity.Property(e => e.MACAddress).IsRequired().HasMaxLength(17);
+            entity.Property(e => e.Name).HasMaxLength(255);
+            entity.HasIndex(e => e.MACAddress).IsUnique();
+        });
 
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+        // Configure NetworkScan
+        modelBuilder.Entity<NetworkScan>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.StartTime).IsRequired();
+            entity.HasIndex(e => e.StartTime);
+        });
+
+        // Configure DeviceHistory
+        modelBuilder.Entity<DeviceHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Timestamp).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => e.ScanId);
+        });
+
+        base.OnModelCreating(modelBuilder);
+    }
 }

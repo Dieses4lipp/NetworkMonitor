@@ -5,7 +5,6 @@ using NetworkMonitor;
 using NetworkMonitor.Infrastructure.Data.Context;
 using RS.Fritz.Manager.API;
 using NetworkMonitor.Services;
-using NetworkMonitor.Data; // Add using for ApplicationDbContext
 
 var connectionString = "Host=192.168.178.172;Database=NetworkMonitor;Username=postgres;Password=postgres";
 var builder = WebApplication.CreateBuilder(args);
@@ -30,11 +29,7 @@ ServicePointManager.ServerCertificateValidationCallback =
     };
 
 
-// Register MyDbContext if it's still needed, otherwise this can be removed.
-builder.Services.AddDbContext<MyDbContext>(options => options.UseNpgsql(connectionString));
-
-// Register ApplicationDbContext to fix the injection error
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<NetworkMonitorDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
