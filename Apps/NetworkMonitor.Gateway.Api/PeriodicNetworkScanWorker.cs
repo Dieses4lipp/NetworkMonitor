@@ -1,4 +1,5 @@
-using NetworkMonitor.Data;
+using NetworkMonitor.Domain;
+using NetworkMonitor.Infrastructure.Data.Context;
 using NetworkMonitor.Services;
 
 namespace NetworkMonitor.Services
@@ -50,7 +51,7 @@ namespace NetworkMonitor.Services
             {
                 var discoveryService = scope.ServiceProvider.GetRequiredService<INetworkDiscoveryService>();
                 var trackingService = scope.ServiceProvider.GetRequiredService<IDeviceTrackingService>();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<NetworkMonitorDbContext>();
 
                 try
                 {
@@ -68,7 +69,7 @@ namespace NetworkMonitor.Services
                         Status = "Completed"
                     };
 
-                    dbContext.Scans.Add(scan);
+                    dbContext.NetworkScans.Add(scan);
                     await dbContext.SaveChangesAsync(cancellationToken);
 
                     var updatedDevices = await trackingService.UpdateDevicesFromScanAsync(discoveredDevices);

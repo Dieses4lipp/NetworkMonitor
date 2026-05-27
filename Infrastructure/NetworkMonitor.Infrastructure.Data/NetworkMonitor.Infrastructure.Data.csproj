@@ -19,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Core\NetworkMonitor.Application\NetworkMonitor.Application.csproj" />
     <ProjectReference Include="..\..\Core\NetworkMonitor.Domain\NetworkMonitor.Domain.csproj" />
   </ItemGroup>
 

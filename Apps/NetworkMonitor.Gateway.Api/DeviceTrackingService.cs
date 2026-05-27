@@ -1,4 +1,5 @@
-using NetworkMonitor.Data;
+using NetworkMonitor.Domain;
+using NetworkMonitor.Infrastructure.Data.Context;
 
 namespace NetworkMonitor.Services
 {
@@ -14,10 +15,10 @@ namespace NetworkMonitor.Services
 
     public class DeviceTrackingService : IDeviceTrackingService
     {
-        private readonly ApplicationDbContext _dbContext;
+        private readonly NetworkMonitorDbContext _dbContext;
         private readonly ILogger<DeviceTrackingService> _logger;
 
-        public DeviceTrackingService(ApplicationDbContext dbContext, ILogger<DeviceTrackingService> logger)
+        public DeviceTrackingService(NetworkMonitorDbContext dbContext, ILogger<DeviceTrackingService> logger)
         {
             _dbContext = dbContext;
             _logger = logger;
@@ -34,7 +35,7 @@ namespace NetworkMonitor.Services
                 device.LastSeen = DateTime.UtcNow;
                 device.ScanCount++;
 
-                _dbContext.Devices.Update(device);
+                _dbContext.NetworkDevices.Update(device);
                 updatedDevices.Add(device);
             }
 
@@ -45,7 +46,7 @@ namespace NetworkMonitor.Services
 
         public async Task<NetworkDevice> GetOrCreateDeviceAsync(DiscoveredDevice discoveredDevice)
         {
-            var existingDevice = _dbContext.Devices
+            var existingDevice = _dbContext.NetworkDevices
                 .FirstOrDefault(d => d.MACAddress == discoveredDevice.MACAddress);
 
             if (existingDevice != null)
@@ -68,7 +69,7 @@ namespace NetworkMonitor.Services
                 ScanCount = 1
             };
 
-            _dbContext.Devices.Add(newDevice);
+            _dbContext.NetworkDevices.Add(newDevice);
             await _dbContext.SaveChangesAsync();
             _logger.LogInformation($"Created new device: {newDevice.Name} ({newDevice.MACAddress})");
             return newDevice;
@@ -90,12 +91,12 @@ namespace NetworkMonitor.Services
 
         public async Task<List<NetworkDevice>> GetAllDevicesAsync()
         {
-            return await Task.FromResult(_dbContext.Devices.OrderByDescending(d => d.LastSeen).ToList());
+            return await Task.FromResult(_dbContext.NetworkDevices.OrderByDescending(d => d.LastSeen).ToList());
         }
 
         public async Task<NetworkDevice> GetDeviceByIdAsync(int id)
         {
-            return await Task.FromResult(_dbContext.Devices.FirstOrDefault(d => d.Id == id));
+            return await Task.FromResult(_dbContext.NetworkDevices.FirstOrDefault(d => d.Id == id));
         }
 
         public async Task<List<DeviceHistory>> GetDeviceHistoryAsync(int deviceId, int limit = 100)

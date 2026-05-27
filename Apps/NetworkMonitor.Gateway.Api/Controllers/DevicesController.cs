@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using NetworkMonitor.Data;
+using NetworkMonitor.Domain;
+using NetworkMonitor.Infrastructure.Data.Context;
 using NetworkMonitor.Services;
 
 namespace NetworkMonitor.Controllers
@@ -10,13 +11,13 @@ namespace NetworkMonitor.Controllers
     {
         private readonly IDeviceTrackingService _trackingService;
         private readonly INetworkDiscoveryService _discoveryService;
-        private readonly ApplicationDbContext _dbContext;
+        private readonly NetworkMonitorDbContext _dbContext;
         private readonly ILogger<DevicesController> _logger;
 
         public DevicesController(
             IDeviceTrackingService trackingService,
             INetworkDiscoveryService discoveryService,
-            ApplicationDbContext dbContext,
+            NetworkMonitorDbContext dbContext,
             ILogger<DevicesController> logger)
         {
             _trackingService = trackingService;
@@ -113,7 +114,7 @@ namespace NetworkMonitor.Controllers
                     Status = "Completed"
                 };
 
-                _dbContext.Scans.Add(scan);
+                _dbContext.NetworkScans.Add(scan);
                 await _dbContext.SaveChangesAsync();
 
                 var updatedDevices = await _trackingService.UpdateDevicesFromScanAsync(discoveredDevices);
@@ -143,7 +144,7 @@ namespace NetworkMonitor.Controllers
         {
             try
             {
-                var scans = _dbContext.Scans
+                var scans = _dbContext.NetworkScans
                     .OrderByDescending(s => s.StartTime)
                     .Take(limit)
                     .Select(s => new

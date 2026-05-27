@@ -1,3 +1,8 @@
-Add-Migration InitialCreate -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "MyDbContext"
+Add-Migration InitialMigration -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "NetworkMonitorDbContext"
 
-Update-Database -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "MyDbContext"
+Update-Database -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "NetworkMonitorDbContext"
+
+Remove-Migration -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "NetworkMonitorDbContext"
+
+revert db to an emtpy state
+Update-Database 0 -Project "NetworkMonitor.Infrastructure.Data" -StartupProject "NetworkMonitor.Gateway.Api" -Context "NetworkMonitorDbContext"
