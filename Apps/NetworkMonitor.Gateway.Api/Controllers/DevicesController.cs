@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Infrastructure.Data.Context;
-using NetworkMonitor.Services;
 
 namespace NetworkMonitor.Controllers
 {
@@ -9,19 +9,13 @@ namespace NetworkMonitor.Controllers
     [Route("api/[controller]")]
     public class DevicesController : ControllerBase
     {
-        private readonly IDeviceTrackingService _trackingService;
-        private readonly INetworkDiscoveryService _discoveryService;
         private readonly NetworkMonitorDbContext _dbContext;
         private readonly ILogger<DevicesController> _logger;
 
         public DevicesController(
-            IDeviceTrackingService trackingService,
-            INetworkDiscoveryService discoveryService,
             NetworkMonitorDbContext dbContext,
             ILogger<DevicesController> logger)
         {
-            _trackingService = trackingService;
-            _discoveryService = discoveryService;
             _dbContext = dbContext;
             _logger = logger;
         }
@@ -31,27 +25,11 @@ namespace NetworkMonitor.Controllers
         {
             try
             {
-                var devices = await _trackingService.GetAllDevicesAsync();
-                var onlineCount = devices.Count(d => d.Status == DeviceStatus.Online);
+                var devices = await _dbContext.Devices
+                    .AsNoTracking()
+                    .ToListAsync();
 
-                return Ok(new
-                {
-                    totalDevices = devices.Count,
-                    onlineDevices = onlineCount,
-                    offlineDevices = devices.Count - onlineCount,
-                    devices = devices.Select(d => new
-                    {
-                        d.Id,
-                        d.Name,
-                        d.IPAddress,
-                        d.MACAddress,
-                        d.Status,
-                        d.InterfaceType,
-                        d.FirstSeen,
-                        d.LastSeen,
-                        d.ScanCount
-                    })
-                });
+                return Ok(devices);
             }
             catch (Exception ex)
             {
@@ -65,104 +43,27 @@ namespace NetworkMonitor.Controllers
         {
             try
             {
-                var device = await _trackingService.GetDeviceByIdAsync(id);
+                var device = await _dbContext.Devices
+                    .Include(d => d.MonitoringJobs)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == id);
+
                 if (device == null)
                     return NotFound("Device not found");
 
-                var history = await _trackingService.GetDeviceHistoryAsync(id, 50);
-
                 return Ok(new
                 {
-                    device = new
-                    {
-                        device.Id,
-                        device.Name,
-                        device.IPAddress,
-                        device.MACAddress,
-                        device.Status,
-                        device.InterfaceType,
-                        device.FirstSeen,
-                        device.LastSeen,
-                        device.ScanCount
-                    },
-                    recentHistory = history.Select(h => new { h.Timestamp, h.Status })
+                    device.Id,
+                    device.AgentId,
+                    device.DisplayName,
+                    device.IpAddress,
+                    device.Status,
+                    jobCount = device.MonitoringJobs.Count
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving device");
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        [HttpPost("scan")]
-        public async Task<IActionResult> TriggerNetworkScan()
-        {
-            try
-            {
-                _logger.LogInformation("Manual network scan triggered");
-                var startTime = DateTime.UtcNow;
-
-                var discoveredDevices = await _discoveryService.ScanNetworkAsync();
-                var endTime = DateTime.UtcNow;
-
-                var scan = new NetworkScan
-                {
-                    StartTime = startTime,
-                    EndTime = endTime,
-                    DevicesFound = discoveredDevices.Count,
-                    Status = "Completed"
-                };
-
-                _dbContext.NetworkScans.Add(scan);
-                await _dbContext.SaveChangesAsync();
-
-                var updatedDevices = await _trackingService.UpdateDevicesFromScanAsync(discoveredDevices);
-
-                foreach (var device in updatedDevices)
-                {
-                    await _trackingService.RecordDeviceHistoryAsync(device.Id, scan.Id, "Online");
-                }
-
-                return Ok(new
-                {
-                    scanDuration = (endTime - startTime).TotalSeconds,
-                    devicesFound = discoveredDevices.Count,
-                    devicesUpdated = updatedDevices.Count,
-                    devices = updatedDevices.Select(d => new { d.Id, d.Name, d.IPAddress, d.MACAddress })
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during manual scan");
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        [HttpGet("scans/history")]
-        public async Task<IActionResult> GetScanHistory([FromQuery] int limit = 20)
-        {
-            try
-            {
-                var scans = _dbContext.NetworkScans
-                    .OrderByDescending(s => s.StartTime)
-                    .Take(limit)
-                    .Select(s => new
-                    {
-                        s.Id,
-                        s.StartTime,
-                        s.EndTime,
-                        s.DevicesFound,
-                        s.Status,
-                        Duration = s.EndTime.HasValue ? (s.EndTime.Value - s.StartTime).TotalSeconds : 0
-                    })
-                    .ToList();
-
-                return Ok(new { scans });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving scan history");
                 return StatusCode(500, new { error = ex.Message });
             }
         }

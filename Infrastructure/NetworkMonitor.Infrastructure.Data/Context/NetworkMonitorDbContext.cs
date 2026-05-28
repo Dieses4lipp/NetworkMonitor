@@ -19,9 +19,6 @@ public class NetworkMonitorDbContext : DbContext
     public virtual DbSet<Device> Devices { get; set; }
     public virtual DbSet<MonitoringJob> MonitoringJobs { get; set; }
     public virtual DbSet<RawMetric> RawMetrics { get; set; }
-
-    // Network discovery entities
-    public virtual DbSet<NetworkDevice> NetworkDevices { get; set; }
     public virtual DbSet<NetworkScan> NetworkScans { get; set; }
     public virtual DbSet<DeviceHistory> DeviceHistories { get; set; }
 
@@ -71,16 +68,6 @@ public class NetworkMonitorDbContext : DbContext
             entity.HasOne(d => d.Job).WithMany(p => p.RawMetrics)
                 .HasForeignKey(d => d.JobId)
                 .HasConstraintName("FK_Metrics_Jobs");
-        });
-
-        // Configure NetworkDevice
-        modelBuilder.Entity<NetworkDevice>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.IPAddress).IsRequired().HasMaxLength(15);
-            entity.Property(e => e.MACAddress).IsRequired().HasMaxLength(17);
-            entity.Property(e => e.Name).HasMaxLength(255);
-            entity.HasIndex(e => e.MACAddress).IsUnique();
         });
 
         // Configure NetworkScan
