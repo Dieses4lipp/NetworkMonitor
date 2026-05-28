@@ -100,6 +100,27 @@ namespace NetworkMonitor.Controllers
 
             return Ok(types);
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteJobById(int id)
+        {
+            try
+            {
+                var job = await _dbContext.MonitoringJobs.FindAsync(id);
+
+                if (job == null)
+                    return NotFound($"Job with ID {id} not found.");
+
+                _dbContext.MonitoringJobs.Remove(job);
+                await _dbContext.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting job {id}");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
     }
     public record CreateJobRequest(
         int DeviceId,

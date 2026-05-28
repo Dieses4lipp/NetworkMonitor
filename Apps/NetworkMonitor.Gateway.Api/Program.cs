@@ -47,8 +47,6 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<NetworkMonitorDbContext>();
 
-    dbContext.Database.Migrate();
-
     if (!dbContext.Agents.Any(a => a.Id == SystemConstants.BuiltInAgentId))
     {
         dbContext.Agents.Add(new Agent
