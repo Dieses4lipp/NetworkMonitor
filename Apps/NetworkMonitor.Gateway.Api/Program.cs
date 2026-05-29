@@ -27,7 +27,8 @@ builder.Services.AddHostedService<JobExecutionWorker>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-
+builder.Services.AddEndpointsApiExplorer(); 
+builder.Services.AddSwaggerGen();
 
 ServicePointManager.ServerCertificateValidationCallback =
     delegate (object sender,
@@ -69,7 +70,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
-
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapControllers();
 
 app.Run();
