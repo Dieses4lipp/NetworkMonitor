@@ -44,26 +44,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "NetworkDevices",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    IPAddress = table.Column<string>(type: "character varying(15)", maxLength: 15, nullable: false),
-                    MACAddress = table.Column<string>(type: "character varying(17)", maxLength: 17, nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    InterfaceType = table.Column<string>(type: "text", nullable: false),
-                    FirstSeen = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastSeen = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ScanCount = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_NetworkDevices", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "NetworkScans",
                 columns: table => new
                 {
@@ -167,12 +147,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                 column: "DeviceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_NetworkDevices_MACAddress",
-                table: "NetworkDevices",
-                column: "MACAddress",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_NetworkScans_StartTime",
                 table: "NetworkScans",
                 column: "StartTime");
@@ -194,9 +168,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
         {
             migrationBuilder.DropTable(
                 name: "DeviceHistories");
-
-            migrationBuilder.DropTable(
-                name: "NetworkDevices");
 
             migrationBuilder.DropTable(
                 name: "NetworkScans");

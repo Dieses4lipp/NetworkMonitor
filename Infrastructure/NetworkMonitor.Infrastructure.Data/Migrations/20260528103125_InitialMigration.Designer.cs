@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetworkMonitor.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(NetworkMonitorDbContext))]
-    [Migration("20260527212542_revokeUnusedTables")]
-    partial class revokeUnusedTables
+    [Migration("20260528103125_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -138,53 +138,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                     b.HasIndex("DeviceId");
 
                     b.ToTable("MonitoringJobs");
-                });
-
-            modelBuilder.Entity("NetworkMonitor.Domain.NetworkDevice", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("FirstSeen")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IPAddress")
-                        .IsRequired()
-                        .HasMaxLength(15)
-                        .HasColumnType("character varying(15)");
-
-                    b.Property<string>("InterfaceType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("LastSeen")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MACAddress")
-                        .IsRequired()
-                        .HasMaxLength(17)
-                        .HasColumnType("character varying(17)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int>("ScanCount")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MACAddress")
-                        .IsUnique();
-
-                    b.ToTable("NetworkDevices");
                 });
 
             modelBuilder.Entity("NetworkMonitor.Domain.NetworkScan", b =>

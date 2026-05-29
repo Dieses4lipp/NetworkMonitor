@@ -112,7 +112,6 @@ namespace NetworkMonitor.Services
             }
             catch (Exception ex)
             {
-                // Silent fail for individual pings
             }
 
             return null;
@@ -166,7 +165,6 @@ namespace NetworkMonitor.Services
             if (macAddress == "Unknown")
                 return "Unknown";
 
-            // This is simplified - in production you'd have a MAC OUI database
             if (macAddress.StartsWith("00:1A:2B") || macAddress.StartsWith("00:1E:65"))
                 return "WiFi";
 
