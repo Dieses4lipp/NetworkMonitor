@@ -154,7 +154,6 @@ namespace NetworkMonitor.Services
             }
             catch (Exception ex)
             {
-                // Return unknown if ARP lookup fails
             }
 
             return "Unknown";

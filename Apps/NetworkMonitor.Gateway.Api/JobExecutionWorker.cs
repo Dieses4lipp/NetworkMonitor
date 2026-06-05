@@ -14,9 +14,6 @@ namespace NetworkMonitor.Gateway.Api
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        // Keeps track of when each job was last executed so we respect the IntervalSeconds
-        private readonly Dictionary<int, DateTime> _lastRunTimes = new();
-
         public JobExecutionWorker(
             ILogger<JobExecutionWorker> logger,
             IServiceScopeFactory scopeFactory,
@@ -42,7 +39,6 @@ namespace NetworkMonitor.Gateway.Api
                     _logger.LogError(ex, "A fatal error occurred while processing jobs.");
                 }
 
-                // Check for due jobs every 5 seconds
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
@@ -52,7 +48,6 @@ namespace NetworkMonitor.Gateway.Api
             using var scope = _scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<NetworkMonitorDbContext>();
 
-            // Fetch all jobs and include the Device so we know the IP Address
             var activeJobs = await dbContext.MonitoringJobs
                 .Include(j => j.Device)
                 .AsNoTracking()
@@ -62,11 +57,10 @@ namespace NetworkMonitor.Gateway.Api
 
             foreach (var job in activeJobs)
             {
-                // Check if it's time to run this job based on its IntervalSeconds
-                var lastRun = _lastRunTimes.GetValueOrDefault(job.Id, DateTime.MinValue);
+                var lastRun = job.LastRunAt ?? DateTime.MinValue;
                 if ((DateTime.UtcNow - lastRun).TotalSeconds < job.IntervalSeconds)
                 {
-                    continue; // Skip, not time yet
+                    continue;
                 }
 
                 _logger.LogInformation($"Executing Job {job.Id} (Type {job.Type}) for Device {job.Device.IpAddress}");
@@ -74,11 +68,11 @@ namespace NetworkMonitor.Gateway.Api
                 RawMetric metric = await ExecuteJobAsync(job, stoppingToken);
                 metricsToSave.Add(metric);
 
-                // Update the last run time in memory
-                _lastRunTimes[job.Id] = DateTime.UtcNow;
+                await dbContext.MonitoringJobs
+                .Where(j => j.Id == job.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.LastRunAt, DateTime.UtcNow), stoppingToken);
             }
 
-            // Bulk save all new metrics to the database
             if (metricsToSave.Any())
             {
                 dbContext.RawMetrics.AddRange(metricsToSave);
@@ -102,13 +96,13 @@ namespace NetworkMonitor.Gateway.Api
             {
                 switch (job.Type)
                 {
-                    case 1: // ICMP Ping
+                    case MonitoringJobType.IcmpPing:
                         metric = await ExecutePingCheck(job.Device.IpAddress, metric);
                         break;
-                    case 2: // HTTP/HTTPS
+                    case MonitoringJobType.Http:
                         metric = await ExecuteHttpCheck(job, metric, stoppingToken);
                         break;
-                    case 3: // TCP Port
+                    case MonitoringJobType.TcpPort:
                         metric = await ExecuteTcpCheck(job, metric);
                         break;
                     default:
@@ -124,7 +118,6 @@ namespace NetworkMonitor.Gateway.Api
             finally
             {
                 stopwatch.Stop();
-                // If it's a success but we didn't explicitly set a Value (like ping latency), use the stopwatch time
                 if (metric.IsSuccess && metric.Value == 0)
                 {
                     metric.Value = stopwatch.ElapsedMilliseconds;
@@ -137,7 +130,7 @@ namespace NetworkMonitor.Gateway.Api
         private async Task<RawMetric> ExecutePingCheck(string ipAddress, RawMetric metric)
         {
             using var ping = new Ping();
-            var reply = await ping.SendPingAsync(ipAddress, 2000); // 2 second timeout
+            var reply = await ping.SendPingAsync(ipAddress, 2000);
 
             if (reply.Status == IPStatus.Success)
             {
@@ -155,7 +148,6 @@ namespace NetworkMonitor.Gateway.Api
 
         private async Task<RawMetric> ExecuteHttpCheck(MonitoringJob job, RawMetric metric, CancellationToken token)
         {
-            // Parse ConfigurationJson to get the specific URL (e.g., {"Url": "https://192.168.178.50:8006"})
             var config = ExtractConfig(job.ConfigurationJson);
             var url = config.GetValueOrDefault("Url", $"http://{job.Device.IpAddress}");
 
@@ -172,7 +164,6 @@ namespace NetworkMonitor.Gateway.Api
 
         private async Task<RawMetric> ExecuteTcpCheck(MonitoringJob job, RawMetric metric)
         {
-            // Parse ConfigurationJson for the port (e.g., {"Port": "22"} for SSH)
             var config = ExtractConfig(job.ConfigurationJson);
             if (!int.TryParse(config.GetValueOrDefault("Port", "80"), out int port))
             {
@@ -182,7 +173,6 @@ namespace NetworkMonitor.Gateway.Api
 
             using var tcpClient = new TcpClient();
 
-            // Connect asynchronously with a 3-second timeout
             var connectTask = tcpClient.ConnectAsync(job.Device.IpAddress, port);
             if (await Task.WhenAny(connectTask, Task.Delay(3000)) == connectTask)
             {

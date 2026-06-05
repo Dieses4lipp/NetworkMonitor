@@ -9,7 +9,6 @@ namespace NetworkMonitor.Gateway.Api
         private readonly ILogger<PeriodicNetworkScanWorker> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        // Adjust this subnet prefix to match your local network
         private readonly string _subnetPrefix = "192.168.178.";
 
         public PeriodicNetworkScanWorker(ILogger<PeriodicNetworkScanWorker> logger, IServiceScopeFactory scopeFactory)
