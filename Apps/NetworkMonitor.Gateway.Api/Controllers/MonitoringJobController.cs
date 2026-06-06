@@ -23,7 +23,6 @@ namespace NetworkMonitor.Controllers
         {
             try
             {
-                // Verify the device actually exists first
                 var deviceExists = await _dbContext.Devices.AnyAsync(d => d.Id == request.DeviceId);
                 if (!deviceExists)
                     return BadRequest($"Device with ID {request.DeviceId} not found.");
@@ -57,7 +56,6 @@ namespace NetworkMonitor.Controllers
                 if (job == null)
                     return NotFound($"Job with ID {id} not found.");
 
-                // Only update the fields that were provided
                 if (request.IntervalSeconds.HasValue)
                     job.IntervalSeconds = request.IntervalSeconds.Value;
 
@@ -88,18 +86,12 @@ namespace NetworkMonitor.Controllers
         [HttpGet("types")]
         public IActionResult GetJobTypes()
         {
-            // Since Type is an integer in your database, we can define the available types here.
-            // Later, you could move these to an Enum in your Domain project.
-            var types = new List<object>
-            {
-                new { Id = 1, Name = "ICMP Ping", Description = "Standard network ping" },
-                new { Id = 2, Name = "HTTP/HTTPS", Description = "Web endpoint health check" },
-                new { Id = 3, Name = "TCP Port", Description = "Check if a specific port is open" },
-                new { Id = 4, Name = "SNMP", Description = "SNMP metric extraction" }
-            };
-
+            var types = Enum.GetValues<MonitoringJobType>()
+            .Select(t => new { Id = (int)t, Name = t.ToString() });
+    
             return Ok(types);
         }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJobById(int id)
         {
@@ -124,13 +116,13 @@ namespace NetworkMonitor.Controllers
     }
     public record CreateJobRequest(
         int DeviceId,
-        int Type,
+        MonitoringJobType Type,
         int IntervalSeconds,
         string? ConfigurationJson
     );
 
     public record UpdateJobRequest(
-        int? Type,
+        MonitoringJobType? Type,
         int? IntervalSeconds,
         string? ConfigurationJson
     );
