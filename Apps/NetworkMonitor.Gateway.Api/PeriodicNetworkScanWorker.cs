@@ -1,7 +1,8 @@
-using System.Net.NetworkInformation;
+using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Infrastructure.Data.Context;
 using NetworkMonitor.Services;
+using System.Net.NetworkInformation;
 
 namespace NetworkMonitor.Gateway.Api
 {
@@ -39,13 +40,30 @@ namespace NetworkMonitor.Gateway.Api
 
         private async Task RunScanAsync(CancellationToken stoppingToken)
         {
-            var discovered = await _discoveryService.ScanNetworkAsync(stoppingToken);
+            var discovered = new List<DiscoveredDevice>();
+            var status = "Completed";
+            var starttime = DateTime.UtcNow;
+            try { discovered = await _discoveryService.ScanNetworkAsync(stoppingToken); }
+            catch (Exception ex)
+            {
+                status = "Failed";
+                _logger.LogError(ex, "Network discovery failed.");
+                return;
+            }
             var activeIps = discovered.Select(d => d.IPAddress).ToList();
-
             _logger.LogInformation("Scan complete. Found {DeviceCount} active devices.", activeIps.Count);
 
             using var scope = _scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<NetworkMonitorDbContext>();
+            var scan = new NetworkScan
+            {
+                StartTime = starttime,
+                EndTime = DateTime.UtcNow,
+                DevicesFound = activeIps.Count,
+                Status = status
+            };
+            dbContext.NetworkScans.Add(scan);
+            await dbContext.SaveChangesAsync(stoppingToken);
 
             var existingDevices = dbContext.Devices
                 .Where(d => d.AgentId == SystemConstants.BuiltInAgentId)
@@ -68,13 +86,27 @@ namespace NetworkMonitor.Gateway.Api
                 else
                 {
                     device.Status = 1;
+                    dbContext.DeviceHistories.Add(new DeviceHistory
+                    {
+                        DeviceId = device.Id,
+                        ScanId = scan.Id,
+                        Timestamp = DateTime.UtcNow,
+                        Status = "Online"
+                    });
                 }
+
             }
-
             var missingDevices = existingDevices.Where(d => !activeIps.Contains(d.IpAddress));
-            foreach (var missing in missingDevices)
+            foreach (var missing in missingDevices) { 
                 missing.Status = 0;
-
+            dbContext.DeviceHistories.Add(new DeviceHistory
+            {
+                DeviceId = missing.Id,
+                ScanId = scan.Id,
+                Timestamp = DateTime.UtcNow,
+                Status = "Offline"
+            });
+        }
             await dbContext.SaveChangesAsync(stoppingToken);
         }
     }
