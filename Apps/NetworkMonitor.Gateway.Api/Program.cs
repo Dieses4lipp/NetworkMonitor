@@ -4,8 +4,8 @@ using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Infrastructure.Data.Context;
 using NetworkMonitor.Services;
 
-var connectionString = "Host=192.168.178.172;Database=NetworkMonitor;Username=postgres;Password=postgres";
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=192.168.178.172;Database=NetworkMonitor;Username=postgres;Password=postgres";
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
