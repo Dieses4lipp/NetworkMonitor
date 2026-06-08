@@ -10,6 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<INetworkDiscoveryService, NetworkDiscoveryService>();
+builder.Services.AddScoped<INetworkScanService, NetworkScanService>();
 builder.Services.AddHostedService<PeriodicNetworkScanWorker>();
 builder.Services.AddHttpClient("MonitorClient")
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler

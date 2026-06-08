@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
+using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Infrastructure.Data.Context;
 
 namespace NetworkMonitor.Controllers
@@ -11,11 +12,14 @@ namespace NetworkMonitor.Controllers
     {
         private readonly NetworkMonitorDbContext _dbContext;
         private readonly ILogger<DevicesController> _logger;
+        private readonly INetworkScanService _networkScanService;
 
         public DevicesController(
             NetworkMonitorDbContext dbContext,
-            ILogger<DevicesController> logger)
+            ILogger<DevicesController> logger,
+            INetworkScanService networkScanService)
         {
+            _networkScanService = networkScanService;
             _dbContext = dbContext;
             _logger = logger;
         }
@@ -64,6 +68,39 @@ namespace NetworkMonitor.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving device");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("scan")]
+        public async Task<IActionResult> ScanDevice(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var scan = await _networkScanService.RunScanAsync(cancellationToken);
+                return Ok(scan);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error scanning the network");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("scans")]
+        public async Task<IActionResult> GetScanHistory()
+        {
+            try
+            {
+                var scans = await _dbContext.NetworkScans
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                return Ok(scans);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving scan history");
                 return StatusCode(500, new { error = ex.Message });
             }
         }
