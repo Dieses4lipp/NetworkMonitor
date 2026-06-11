@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 namespace NetworkMonitor.Services
@@ -134,21 +135,36 @@ namespace NetworkMonitor.Services
         {
             try
             {
-                var arpCommand = $"arp -a {ipAddress}";
-                var processInfo = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c {arpCommand}")
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using (var process = System.Diagnostics.Process.Start(processInfo))
-                {
-                    var output = process.StandardOutput.ReadToEnd();
-                    var match = Regex.Match(output, @"([0-9A-F]{2}[:-]){5}([0-9A-F]{2})", RegexOptions.IgnoreCase);
-                    if (match.Success)
+                    var arpCommand = $"arp -a {ipAddress}";
+                    var processInfo = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c {arpCommand}")
                     {
-                        return match.Value;
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using (var process = System.Diagnostics.Process.Start(processInfo))
+                    {
+                        var output = process.StandardOutput.ReadToEnd();
+                        var match = Regex.Match(output, @"([0-9A-F]{2}[:-]){5}([0-9A-F]{2})", RegexOptions.IgnoreCase);
+                        if (match.Success)
+                        {
+                            return match.Value;
+                        }
+                    }
+                }
+                else
+                {
+                    var lines = File.ReadAllLines("/proc/net/arp");
+                    foreach (var line in lines.Skip(1))
+                    {
+                        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length >= 4 && parts[0] == ipAddress)
+                        {
+                            return parts[3];
+                        }
                     }
                 }
             }
