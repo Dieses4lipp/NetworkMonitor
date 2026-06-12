@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetworkMonitor.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(NetworkMonitorDbContext))]
-    [Migration("20260528103125_InitialMigration")]
+    [Migration("20260612164429_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -128,6 +128,9 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(60);
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer");

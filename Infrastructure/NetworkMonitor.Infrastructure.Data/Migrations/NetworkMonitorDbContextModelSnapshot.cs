@@ -126,6 +126,9 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(60);
 
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
