@@ -90,7 +90,8 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                     DeviceId = table.Column<int>(type: "integer", nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
                     IntervalSeconds = table.Column<int>(type: "integer", nullable: false, defaultValue: 60),
-                    ConfigurationJson = table.Column<string>(type: "jsonb", nullable: true)
+                    ConfigurationJson = table.Column<string>(type: "jsonb", nullable: true),
+                    LastRunAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
