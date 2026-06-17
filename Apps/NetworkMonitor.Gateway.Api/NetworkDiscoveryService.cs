@@ -18,6 +18,7 @@ namespace NetworkMonitor.Services
         public string MACAddress { get; set; }
         public string HostName { get; set; }
         public string InterfaceType { get; set; }
+        public string OperatingSystem { get; set; } = "Unknown";
         public DateTime DiscoveredAt { get; set; }
     }
 
@@ -99,12 +100,13 @@ namespace NetworkMonitor.Services
                     {
                         var hostname = await GetHostNameAsync(ipAddress);
                         var mac = GetMacAddressForIp(ipAddress);
-
+                        var os = GuessOperatingSystem(ipAddress);
                         return new DiscoveredDevice
                         {
                             IPAddress = ipAddress,
                             MACAddress = mac,
                             HostName = hostname,
+                            OperatingSystem = os,
                             InterfaceType = DetermineInterfaceType(mac),
                             DiscoveredAt = DateTime.UtcNow
                         };
@@ -117,7 +119,51 @@ namespace NetworkMonitor.Services
 
             return null;
         }
+        private string GuessOperatingSystem(string ipAddress)
+        {
+            var ttl = GetTtl(ipAddress);
+            if (ttl == null) return "Unknown";
 
+            if (ttl <= 64) return "Linux/Unix";
+            if (ttl <= 128) return "Windows";
+            return "Network Device";
+        }
+
+        private int? GetTtl(string ipAddress)
+        {
+            try
+            {
+                string command, args;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    command = "cmd.exe";
+                    args = $"/c ping -n 1 -w 1000 {ipAddress}";
+                }
+                else
+                {
+                    command = "/bin/sh";
+                    args = $"-c \"ping -c 1 -W 1 {ipAddress}\"";
+                }
+
+                var psi = new System.Diagnostics.ProcessStartInfo(command, args)
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(2000);
+
+                var match = Regex.Match(output, @"[Tt][Tt][Ll][=:](\d+)");
+                return match.Success ? int.Parse(match.Groups[1].Value) : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
         private async Task<string> GetHostNameAsync(string ipAddress)
         {
             try

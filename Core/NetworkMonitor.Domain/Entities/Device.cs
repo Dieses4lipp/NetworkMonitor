@@ -16,6 +16,6 @@ public partial class Device
     public int Status { get; set; }
 
     public virtual Agent Agent { get; set; } = null!;
-
+    public string? OperatingSystem { get; set; }
     public virtual ICollection<MonitoringJob> MonitoringJobs { get; set; } = new List<MonitoringJob>();
 }

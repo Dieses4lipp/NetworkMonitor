@@ -62,7 +62,7 @@ namespace NetworkMonitor.Gateway.Api
             foreach (var ip in activeIps)
             {
                 var device = existingDevices.FirstOrDefault(d => d.IpAddress == ip);
-
+                var info = discovered.First(d => d.IPAddress == ip);
                 if (device == null)
                 {
                     _dbContext.Devices.Add(new Device
@@ -71,11 +71,15 @@ namespace NetworkMonitor.Gateway.Api
                         DisplayName = $"Unknown Device ({ip})",
                         IpAddress = ip,
                         Status = 1
+                        OperatingSystem = info.OperatingSystem
                     });
                 }
                 else
                 {
                     device.Status = 1;
+                    if (string.IsNullOrEmpty(device.OperatingSystem) || device.OperatingSystem == "Unknown")
+                        device.OperatingSystem = info.OperatingSystem;
+
                     _dbContext.DeviceHistories.Add(new DeviceHistory
                     {
                         DeviceId = device.Id,
