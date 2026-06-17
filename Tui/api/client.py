@@ -58,8 +58,6 @@ async def trigger_scan() -> Optional[dict]:
 async def fetch_jobs() -> list[dict]:
     """GET /api/jobs — fetches all monitoring jobs (via types endpoint for reference)."""
     try:
-        # There is no GET /api/jobs list endpoint; we derive jobs from devices
-        # We expose job types for display purposes
         response = await get_client().get("jobs/types")
         response.raise_for_status()
         return response.json()

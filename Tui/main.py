@@ -35,6 +35,13 @@ from api.client import (
 )
 from widgets.device_list import DeviceList
 
+async def fetch_devices_mock():
+    """Mock data based on your screenshot."""
+    return [
+        {"id": 1, "hostname": "Proxmox-Node-1", "ipAddress": "192.168.1.10", "status": "Online", "latencyMs": 12},
+        {"id": 2, "hostname": "PiHole-DNS", "ipAddress": "192.168.1.53", "status": "Online", "latencyMs": 3},
+        {"id": 3, "hostname": "Unifi-Controller", "ipAddress": "192.168.1.200", "status": "Offline", "latencyMs": 0},
+    ]
 
 # ---------------------------------------------------------------------------
 # CSS
@@ -579,6 +586,7 @@ class NetworkMonitorApp(App):
         """Close filter on Enter."""
         self.action_toggle_filter()
 
+        latency = f"{dev.get('latencyMs', 0)} ms"
 
 # ---------------------------------------------------------------------------
 # Entry point

@@ -93,31 +93,35 @@ namespace NetworkMonitor.Services
         {
             try
             {
+                bool icmpAlive = false;
                 using (var ping = new Ping())
                 {
-                    var reply = await ping.SendPingAsync(ipAddress, 1000);
-                    if (reply.Status == IPStatus.Success)
-                    {
-                        var hostname = await GetHostNameAsync(ipAddress);
-                        var mac = GetMacAddressForIp(ipAddress);
-                        var os = GuessOperatingSystem(ipAddress);
-                        return new DiscoveredDevice
-                        {
-                            IPAddress = ipAddress,
-                            MACAddress = mac,
-                            HostName = hostname,
-                            OperatingSystem = os,
-                            InterfaceType = DetermineInterfaceType(mac),
-                            DiscoveredAt = DateTime.UtcNow
-                        };
-                    }
+                    var reply = await ping.SendPingAsync(ipAddress, 1500);
+                    icmpAlive = reply.Status == IPStatus.Success;
                 }
-            }
-            catch (Exception ex)
-            {
-            }
 
-            return null;
+                var mac = GetMacAddressForIp(ipAddress);
+                bool isAlive = icmpAlive || mac != "Unknown"; // ARP-resolved counts as alive too
+
+                if (!isAlive) return null;
+
+                var hostname = await GetHostNameAsync(ipAddress);
+                var os = icmpAlive ? GuessOperatingSystem(ipAddress) : "Unknown"; // TTL probe needs ICMP
+
+                return new DiscoveredDevice
+                {
+                    IPAddress = ipAddress,
+                    MACAddress = mac,
+                    HostName = hostname,
+                    InterfaceType = DetermineInterfaceType(mac),
+                    OperatingSystem = os,
+                    DiscoveredAt = DateTime.UtcNow
+                };
+            }
+            catch
+            {
+                return null;
+            }
         }
         private string GuessOperatingSystem(string ipAddress)
         {
@@ -207,14 +211,14 @@ namespace NetworkMonitor.Services
                     foreach (var line in lines.Skip(1))
                     {
                         var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 4 && parts[0] == ipAddress)
+                        if (parts.Length >= 4 && parts[0] == ipAddress && parts[2] == "0x2")
                         {
                             return parts[3];
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
 

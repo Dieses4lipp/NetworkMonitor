@@ -70,7 +70,7 @@ namespace NetworkMonitor.Gateway.Api
                         AgentId = SystemConstants.BuiltInAgentId,
                         DisplayName = $"Unknown Device ({ip})",
                         IpAddress = ip,
-                        Status = 1
+                        Status = 1,
                         OperatingSystem = info.OperatingSystem
                     });
                 }

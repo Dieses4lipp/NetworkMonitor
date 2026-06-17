@@ -176,7 +176,7 @@ class DeviceList(Widget):
             ip = dev.get("ipAddress") or dev.get("ip_address", "—")
             name = dev.get("displayName") or dev.get("hostname", "Unknown")
             raw_status = dev.get("status", 0)
-            
+
             # status can be int (0/1) from the API or string from mock data
             if isinstance(raw_status, str):
                 is_online = raw_status.lower() == "online"
@@ -203,6 +203,7 @@ class DeviceList(Widget):
             os_text = Text(os_name, style=os_style)
 
             table.add_row(ip_text, name, status_text, latency, job_text, os_text, key=str(dev.get("id", ip)))
+
         # Update summary bar
         last_scan = "—"
         try:
