@@ -62,6 +62,7 @@ namespace NetworkMonitor.Controllers
                     device.DisplayName,
                     device.IpAddress,
                     device.Status,
+                    device.OperatingSystem,
                     jobCount = device.MonitoringJobs.Count
                 });
             }

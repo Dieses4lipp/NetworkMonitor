@@ -18,6 +18,7 @@ namespace NetworkMonitor.Services
         public string MACAddress { get; set; }
         public string HostName { get; set; }
         public string InterfaceType { get; set; }
+        public string OperatingSystem { get; set; } = "Unknown";
         public DateTime DiscoveredAt { get; set; }
     }
 
@@ -92,32 +93,81 @@ namespace NetworkMonitor.Services
         {
             try
             {
+                bool icmpAlive = false;
                 using (var ping = new Ping())
                 {
-                    var reply = await ping.SendPingAsync(ipAddress, 1000);
-                    if (reply.Status == IPStatus.Success)
-                    {
-                        var hostname = await GetHostNameAsync(ipAddress);
-                        var mac = GetMacAddressForIp(ipAddress);
-
-                        return new DiscoveredDevice
-                        {
-                            IPAddress = ipAddress,
-                            MACAddress = mac,
-                            HostName = hostname,
-                            InterfaceType = DetermineInterfaceType(mac),
-                            DiscoveredAt = DateTime.UtcNow
-                        };
-                    }
+                    var reply = await ping.SendPingAsync(ipAddress, 1500);
+                    icmpAlive = reply.Status == IPStatus.Success;
                 }
-            }
-            catch (Exception ex)
-            {
-            }
 
-            return null;
+                var mac = GetMacAddressForIp(ipAddress);
+                bool isAlive = icmpAlive || mac != "Unknown"; // ARP-resolved counts as alive too
+
+                if (!isAlive) return null;
+
+                var hostname = await GetHostNameAsync(ipAddress);
+                var os = icmpAlive ? GuessOperatingSystem(ipAddress) : "Unknown"; // TTL probe needs ICMP
+
+                return new DiscoveredDevice
+                {
+                    IPAddress = ipAddress,
+                    MACAddress = mac,
+                    HostName = hostname,
+                    InterfaceType = DetermineInterfaceType(mac),
+                    OperatingSystem = os,
+                    DiscoveredAt = DateTime.UtcNow
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        private string GuessOperatingSystem(string ipAddress)
+        {
+            var ttl = GetTtl(ipAddress);
+            if (ttl == null) return "Unknown";
+
+            if (ttl <= 64) return "Linux/Unix";
+            if (ttl <= 128) return "Windows";
+            return "Network Device";
         }
 
+        private int? GetTtl(string ipAddress)
+        {
+            try
+            {
+                string command, args;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    command = "cmd.exe";
+                    args = $"/c ping -n 1 -w 1000 {ipAddress}";
+                }
+                else
+                {
+                    command = "/bin/sh";
+                    args = $"-c \"ping -c 1 -W 1 {ipAddress}\"";
+                }
+
+                var psi = new System.Diagnostics.ProcessStartInfo(command, args)
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(2000);
+
+                var match = Regex.Match(output, @"[Tt][Tt][Ll][=:](\d+)");
+                return match.Success ? int.Parse(match.Groups[1].Value) : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
         private async Task<string> GetHostNameAsync(string ipAddress)
         {
             try
@@ -161,14 +211,14 @@ namespace NetworkMonitor.Services
                     foreach (var line in lines.Skip(1))
                     {
                         var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 4 && parts[0] == ipAddress)
+                        if (parts.Length >= 4 && parts[0] == ipAddress && parts[2] == "0x2")
                         {
                             return parts[3];
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
             }
 

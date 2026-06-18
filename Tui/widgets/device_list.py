@@ -162,7 +162,7 @@ class DeviceList(Widget):
     def on_mount(self) -> None:
         table = self.query_one("#device-table", DataTable)
         table.add_columns(
-            "IP Address", "Name", "Status", "Latency", "Jobs"
+            "IP Address", "Name", "Status", "Latency", "Jobs", "OS"
         )
 
     def watch_devices(self, devices: list) -> None:
@@ -198,8 +198,11 @@ class DeviceList(Widget):
 
             # Highlight the selected IP
             ip_text = Text(ip, style="cyan bold" if self._selected_device and self._selected_device.get("ipAddress") == ip else "")
+            os_name = dev.get("operatingSystem") or "—"
+            os_style = "cyan" if "Linux" in os_name else "blue" if "Windows" in os_name else "dim"
+            os_text = Text(os_name, style=os_style)
 
-            table.add_row(ip_text, name, status_text, latency, job_text, key=str(dev.get("id", ip)))
+            table.add_row(ip_text, name, status_text, latency, job_text, os_text, key=str(dev.get("id", ip)))
 
         # Update summary bar
         last_scan = "—"
