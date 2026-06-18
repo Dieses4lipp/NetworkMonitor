@@ -17,7 +17,7 @@ builder.Services.AddHttpClient("MonitorClient")
     {
         ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
     });
-
+builder.Services.AddSingleton<IVendorLookupService, VendorLookupService>();
 builder.Services.AddHostedService<JobExecutionWorker>();
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
