@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using NetworkMonitor.Gateway.Api;
 
 namespace NetworkMonitor.Services
 {
@@ -17,7 +19,8 @@ namespace NetworkMonitor.Services
         public string IPAddress { get; set; }
         public string MACAddress { get; set; }
         public string HostName { get; set; }
-        public string InterfaceType { get; set; }
+        public string? Vendor { get; set; }
+        public string InterfaceType { get; set; } = "Unknown";
         public string OperatingSystem { get; set; } = "Unknown";
         public DateTime DiscoveredAt { get; set; }
     }
@@ -25,10 +28,13 @@ namespace NetworkMonitor.Services
     public class NetworkDiscoveryService : INetworkDiscoveryService
     {
         private readonly ILogger<NetworkDiscoveryService> _logger;
-
-        public NetworkDiscoveryService(ILogger<NetworkDiscoveryService> logger)
+        private readonly IVendorLookupService _vendorLookup;
+        public NetworkDiscoveryService(
+            ILogger<NetworkDiscoveryService> logger,
+            IVendorLookupService vendorLookup)
         {
             _logger = logger;
+            _vendorLookup = vendorLookup;
         }
 
         public async Task<List<DiscoveredDevice>> ScanNetworkAsync(CancellationToken cancellationToken = default)
@@ -93,25 +99,27 @@ namespace NetworkMonitor.Services
         {
             try
             {
-                bool icmpAlive = false;
+                PingReply? reply = null;
                 using (var ping = new Ping())
                 {
-                    var reply = await ping.SendPingAsync(ipAddress, 1500);
-                    icmpAlive = reply.Status == IPStatus.Success;
+                    reply = await ping.SendPingAsync(ipAddress, 1500);
                 }
 
+                var icmpAlive = reply?.Status == IPStatus.Success;
                 var mac = GetMacAddressForIp(ipAddress);
-                bool isAlive = icmpAlive || mac != "Unknown"; // ARP-resolved counts as alive too
+                var isAlive = icmpAlive || mac != "Unknown";
 
                 if (!isAlive) return null;
 
                 var hostname = await GetHostNameAsync(ipAddress);
-                var os = icmpAlive ? GuessOperatingSystem(ipAddress) : "Unknown"; // TTL probe needs ICMP
+                var os = GuessOperatingSystem(reply?.Options?.Ttl);
+                var vendor = _vendorLookup.Lookup(mac);
 
                 return new DiscoveredDevice
                 {
                     IPAddress = ipAddress,
                     MACAddress = mac,
+                    Vendor = vendor,
                     HostName = hostname,
                     InterfaceType = DetermineInterfaceType(mac),
                     OperatingSystem = os,
@@ -123,50 +131,13 @@ namespace NetworkMonitor.Services
                 return null;
             }
         }
-        private string GuessOperatingSystem(string ipAddress)
-        {
-            var ttl = GetTtl(ipAddress);
-            if (ttl == null) return "Unknown";
 
+        private string GuessOperatingSystem(int? ttl)
+        {
+            if (ttl == null) return "Unknown";
             if (ttl <= 64) return "Linux/Unix";
             if (ttl <= 128) return "Windows";
             return "Network Device";
-        }
-
-        private int? GetTtl(string ipAddress)
-        {
-            try
-            {
-                string command, args;
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    command = "cmd.exe";
-                    args = $"/c ping -n 1 -w 1000 {ipAddress}";
-                }
-                else
-                {
-                    command = "/bin/sh";
-                    args = $"-c \"ping -c 1 -W 1 {ipAddress}\"";
-                }
-
-                var psi = new System.Diagnostics.ProcessStartInfo(command, args)
-                {
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using var process = System.Diagnostics.Process.Start(psi);
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit(2000);
-
-                var match = Regex.Match(output, @"[Tt][Tt][Ll][=:](\d+)");
-                return match.Success ? int.Parse(match.Groups[1].Value) : null;
-            }
-            catch
-            {
-                return null;
-            }
         }
         private async Task<string> GetHostNameAsync(string ipAddress)
         {

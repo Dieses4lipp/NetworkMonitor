@@ -25,7 +25,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<NetworkMonitorDbContext>(options => options.UseNpgsql(connectionString));
 
 var app = builder.Build();
-
+var vendorLookup = app.Services.GetRequiredService<IVendorLookupService>();
+await ((VendorLookupService)vendorLookup).InitializeAsync();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<NetworkMonitorDbContext>();
