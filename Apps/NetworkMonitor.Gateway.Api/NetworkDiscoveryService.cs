@@ -158,9 +158,12 @@ namespace NetworkMonitor.Services
             {
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var arpCommand = $"arp -a {ipAddress}";
-                    var processInfo = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c {arpCommand}")
+                    if (!IPAddress.TryParse(ipAddress, out _))
+                        return "Unknown";
+
+                    var processInfo = new System.Diagnostics.ProcessStartInfo("arp.exe")
                     {
+                        ArgumentList = { "-a", ipAddress },
                         RedirectStandardOutput = true,
                         UseShellExecute = false,
                         CreateNoWindow = true

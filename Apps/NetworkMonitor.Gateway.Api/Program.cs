@@ -5,7 +5,16 @@ using NetworkMonitor.Infrastructure.Data.Context;
 using NetworkMonitor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=192.168.178.172;Database=NetworkMonitor;Username=postgres;Password=postgres";
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("NETWORKMONITOR_DB_CONNECTION")
+    ?? throw new InvalidOperationException(
+        "No database connection string configured. Set ConnectionStrings:DefaultConnection or the NETWORKMONITOR_DB_CONNECTION environment variable.");
+
+var apiKey = builder.Configuration["ApiKey"]
+    ?? Environment.GetEnvironmentVariable("NETWORKMONITOR_API_KEY")
+    ?? throw new InvalidOperationException(
+        "No API key configured. Set ApiKey or the NETWORKMONITOR_API_KEY environment variable.");
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -52,6 +61,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<ApiKeyMiddleware>(apiKey);
 app.UseAuthorization();
 app.UseSwagger();
 app.UseSwaggerUI();
