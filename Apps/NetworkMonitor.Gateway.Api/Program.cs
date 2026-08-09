@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
@@ -21,10 +22,16 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<INetworkDiscoveryService, NetworkDiscoveryService>();
 builder.Services.AddScoped<INetworkScanService, NetworkScanService>();
 builder.Services.AddHostedService<PeriodicNetworkScanWorker>();
-builder.Services.AddHttpClient("MonitorClient")
+var allowInsecureTls = builder.Configuration.GetValue<bool>("NetworkMonitor:AllowSelfSignedCertificates");
+builder.Services.AddHttpClient("MonitorClient", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+})
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
-        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+        ServerCertificateCustomValidationCallback = allowInsecureTls
+            ? (message, cert, chain, errors) => true
+            : null
     });
 builder.Services.AddSingleton<IVendorLookupService, VendorLookupService>();
 builder.Services.AddHostedService<JobExecutionWorker>();
@@ -46,7 +53,7 @@ using (var scope = app.Services.CreateScope())
         {
             Id = SystemConstants.BuiltInAgentId,
             Name = "Gateway-Local-Scanner",
-            SecretKey = "local-internal-no-auth-needed",
+            SecretKey = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
             LastSeen = DateTime.UtcNow,
             Version = "1.0.0"
         });
@@ -57,14 +64,14 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
 app.UseMiddleware<ApiKeyMiddleware>(apiKey);
 app.UseAuthorization();
-app.UseSwagger();
-app.UseSwaggerUI();
 app.MapControllers();
 
 app.Run();
