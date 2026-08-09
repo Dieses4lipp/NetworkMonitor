@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -151,6 +152,13 @@ namespace NetworkMonitor.Gateway.Api
             var config = ExtractConfig(job.ConfigurationJson);
             var url = config.GetValueOrDefault("Url", $"http://{job.Device.IpAddress}");
 
+            if (!await IsAllowedHttpTargetAsync(url, token))
+            {
+                metric.IsSuccess = false;
+                metric.ErrorMessage = "Target URL is not permitted.";
+                return metric;
+            }
+
             var client = _httpClientFactory.CreateClient("MonitorClient");
             client.Timeout = TimeSpan.FromSeconds(10);
 
@@ -160,6 +168,64 @@ namespace NetworkMonitor.Gateway.Api
             metric.ErrorMessage = response.IsSuccessStatusCode ? null : $"HTTP {(int)response.StatusCode}";
 
             return metric;
+        }
+
+        private static async Task<bool> IsAllowedHttpTargetAsync(string url, CancellationToken token)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return false;
+
+            if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+                return false;
+
+            IEnumerable<IPAddress> addresses;
+            if (IPAddress.TryParse(uri.Host, out var literal))
+            {
+                addresses = new[] { literal };
+            }
+            else
+            {
+                try
+                {
+                    addresses = await Dns.GetHostAddressesAsync(uri.Host, token);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            // Every resolved address must be a routable, non-internal host.
+            return addresses.Any() && addresses.All(a => !IsInternalAddress(a));
+        }
+
+        private static bool IsInternalAddress(IPAddress address)
+        {
+            if (IPAddress.IsLoopback(address))
+                return true;
+
+            if (address.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                if (address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6UniqueLocal)
+                    return true;
+                if (address.IsIPv4MappedToIPv6)
+                    address = address.MapToIPv4();
+                else
+                    return false;
+            }
+
+            var b = address.GetAddressBytes();
+            if (b.Length != 4)
+                return false;
+
+            // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (link-local incl. cloud metadata), 100.64.0.0/10 (CGNAT)
+            return b[0] == 10
+                || (b[0] == 172 && b[1] >= 16 && b[1] <= 31)
+                || (b[0] == 192 && b[1] == 168)
+                || (b[0] == 169 && b[1] == 254)
+                || (b[0] == 100 && b[1] >= 64 && b[1] <= 127)
+                || b[0] == 0
+                || b[0] == 127;
         }
 
         private async Task<RawMetric> ExecuteTcpCheck(MonitoringJob job, RawMetric metric)
