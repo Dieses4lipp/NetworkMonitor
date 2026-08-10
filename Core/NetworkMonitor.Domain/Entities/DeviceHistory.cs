@@ -6,5 +6,5 @@ public class DeviceHistory
     public int DeviceId { get; set; }
     public int ScanId { get; set; }
     public DateTime Timestamp { get; set; }
-    public string Status { get; set; }
+    public required string Status { get; set; }
 }

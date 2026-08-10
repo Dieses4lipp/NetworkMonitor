@@ -16,9 +16,9 @@ namespace NetworkMonitor.Services
 
     public class DiscoveredDevice
     {
-        public string IPAddress { get; set; }
-        public string MACAddress { get; set; }
-        public string HostName { get; set; }
+        public required string IPAddress { get; set; }
+        public required string MACAddress { get; set; }
+        public required string HostName { get; set; }
         public string? Vendor { get; set; }
         public string InterfaceType { get; set; } = "Unknown";
         public string OperatingSystem { get; set; } = "Unknown";
@@ -68,7 +68,7 @@ namespace NetworkMonitor.Services
         public async Task<List<DiscoveredDevice>> PingRangeAsync(string gatewayPrefix, int startIp = 1, int endIp = 254, CancellationToken cancellationToken = default)
         {
             var devices = new List<DiscoveredDevice>();
-            var pingTasks = new List<Task<DiscoveredDevice>>();
+            var pingTasks = new List<Task<DiscoveredDevice?>>();
 
             for (int i = startIp; i <= endIp; i++)
             {
@@ -81,7 +81,7 @@ namespace NetworkMonitor.Services
                 if (pingTasks.Count >= 10)
                 {
                     var results = await Task.WhenAll(pingTasks);
-                    devices.AddRange(results.Where(r => r != null));
+                    devices.AddRange(results.OfType<DiscoveredDevice>());
                     pingTasks.Clear();
                 }
             }
@@ -89,13 +89,13 @@ namespace NetworkMonitor.Services
             if (pingTasks.Count > 0)
             {
                 var results = await Task.WhenAll(pingTasks);
-                devices.AddRange(results.Where(r => r != null));
+                devices.AddRange(results.OfType<DiscoveredDevice>());
             }
 
             return devices;
         }
 
-        private async Task<DiscoveredDevice> PingAddressAsync(string ipAddress, CancellationToken cancellationToken = default)
+        private async Task<DiscoveredDevice?> PingAddressAsync(string ipAddress, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -112,8 +112,8 @@ namespace NetworkMonitor.Services
                 if (!isAlive) return null;
 
                 var hostname = await GetHostNameAsync(ipAddress);
-                var os = GuessOperatingSystem(reply?.Options?.Ttl);
                 var vendor = _vendorLookup.Lookup(mac);
+                var os = GuessOperatingSystem(reply?.Options?.Ttl, vendor, hostname);
 
                 return new DiscoveredDevice
                 {
@@ -132,8 +132,31 @@ namespace NetworkMonitor.Services
             }
         }
 
-        private string GuessOperatingSystem(int? ttl)
+        private static readonly string[] AppleMobileHints = { "iphone", "ipad", "ipod" };
+        private static readonly string[] AppleDesktopHints = { "macbook", "imac", "mac-mini", "macmini", "mbp", "mstudio" };
+        private static readonly string[] AndroidVendorHints = { "samsung", "xiaomi", "huawei", "oneplus", "google", "oppo", "vivo", "motorola", "realme", "asustek", "sony mobile" };
+        private static readonly string[] NetworkDeviceVendorHints = { "cisco", "tp-link", "tplink", "netgear", "ubiquiti", "mikrotik", "d-link", "dlink", "juniper", "fortinet", "aruba", "zyxel" };
+
+        private string GuessOperatingSystem(int? ttl, string? vendor, string? hostname)
         {
+            var v = vendor?.ToLowerInvariant() ?? string.Empty;
+            var h = hostname?.ToLowerInvariant() ?? string.Empty;
+
+            if (NetworkDeviceVendorHints.Any(hint => v.Contains(hint)))
+                return "Network Device";
+
+            if (v.Contains("apple"))
+            {
+                if (AppleMobileHints.Any(hint => h.Contains(hint)))
+                    return "iOS";
+                if (AppleDesktopHints.Any(hint => h.Contains(hint)))
+                    return "macOS";
+                return "iOS/macOS";
+            }
+
+            if (AndroidVendorHints.Any(hint => v.Contains(hint)) || h.Contains("android"))
+                return "Android";
+
             if (ttl == null) return "Unknown";
             if (ttl <= 64) return "Linux/Unix";
             if (ttl <= 128) return "Windows";
@@ -171,6 +194,9 @@ namespace NetworkMonitor.Services
 
                     using (var process = System.Diagnostics.Process.Start(processInfo))
                     {
+                        if (process == null)
+                            return "Unknown";
+
                         var output = process.StandardOutput.ReadToEnd();
                         var match = Regex.Match(output, @"([0-9A-F]{2}[:-]){5}([0-9A-F]{2})", RegexOptions.IgnoreCase);
                         if (match.Success)
@@ -210,7 +236,7 @@ namespace NetworkMonitor.Services
             return "Ethernet";
         }
 
-        private IPAddress GetGatewayAddress()
+        private IPAddress? GetGatewayAddress()
         {
             return NetworkInterface
                 .GetAllNetworkInterfaces()

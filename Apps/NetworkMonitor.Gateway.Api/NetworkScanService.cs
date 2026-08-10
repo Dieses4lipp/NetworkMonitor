@@ -77,7 +77,7 @@ namespace NetworkMonitor.Gateway.Api
                 else
                 {
                     device.Status = 1;
-                    if (string.IsNullOrEmpty(device.OperatingSystem) || device.OperatingSystem == "Unknown")
+                    if (info.OperatingSystem != "Unknown")
                         device.OperatingSystem = info.OperatingSystem;
 
                     _dbContext.DeviceHistories.Add(new DeviceHistory
