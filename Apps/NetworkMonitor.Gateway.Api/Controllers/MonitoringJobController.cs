@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Infrastructure.Data.Context;
 
-namespace NetworkMonitor.Controllers
+namespace NetworkMonitor.Gateway.Api.Controllers
 {
     [ApiController]
     [Route("api/jobs")]
@@ -70,7 +70,7 @@ namespace NetworkMonitor.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error updating job {id}");
+                _logger.LogError(ex, "Error updating job {JobId}", id);
                 return StatusCode(500, new { error = ex.Message });
             }
         }
@@ -78,9 +78,17 @@ namespace NetworkMonitor.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetJobById(int id)
         {
-            var job = await _dbContext.MonitoringJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id);
-            if (job == null) return NotFound();
-            return Ok(job);
+            try
+            {
+                var job = await _dbContext.MonitoringJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id);
+                if (job == null) return NotFound();
+                return Ok(job);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving job {JobId}", id);
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpGet("types")]
@@ -109,7 +117,7 @@ namespace NetworkMonitor.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error deleting job {id}");
+                _logger.LogError(ex, "Error deleting job {JobId}", id);
                 return StatusCode(500, new { error = ex.Message });
             }
         }

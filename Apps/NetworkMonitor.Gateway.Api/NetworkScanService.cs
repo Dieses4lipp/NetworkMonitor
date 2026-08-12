@@ -1,6 +1,5 @@
 ﻿using NetworkMonitor.Domain;
 using NetworkMonitor.Infrastructure.Data.Context;
-using NetworkMonitor.Services;
 
 namespace NetworkMonitor.Gateway.Api
 {

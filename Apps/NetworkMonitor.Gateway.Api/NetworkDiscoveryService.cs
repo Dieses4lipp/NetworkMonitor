@@ -4,9 +4,8 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using NetworkMonitor.Gateway.Api;
 
-namespace NetworkMonitor.Services
+namespace NetworkMonitor.Gateway.Api
 {
     public interface INetworkDiscoveryService
     {

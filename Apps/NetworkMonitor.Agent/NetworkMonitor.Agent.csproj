@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>NetworkMonitor.Agent</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-NetworkMonitor.Agent-b4335e53-4d4b-441b-9779-d11281becd85</UserSecretsId>
