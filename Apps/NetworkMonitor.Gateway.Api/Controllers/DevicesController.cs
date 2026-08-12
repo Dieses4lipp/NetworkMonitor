@@ -4,7 +4,7 @@ using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Infrastructure.Data.Context;
 
-namespace NetworkMonitor.Controllers
+namespace NetworkMonitor.Gateway.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]

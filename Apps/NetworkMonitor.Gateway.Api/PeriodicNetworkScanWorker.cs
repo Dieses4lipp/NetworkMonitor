@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Infrastructure.Data.Context;
-using NetworkMonitor.Services;
 using System.Net.NetworkInformation;
 
 namespace NetworkMonitor.Gateway.Api

@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Infrastructure.Data.Context;
-using NetworkMonitor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -35,7 +34,6 @@ builder.Services.AddHttpClient("MonitorClient", client =>
     });
 builder.Services.AddSingleton<IVendorLookupService, VendorLookupService>();
 builder.Services.AddHostedService<JobExecutionWorker>();
-builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<NetworkMonitorDbContext>(options => options.UseNpgsql(connectionString));
@@ -63,7 +61,6 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
     app.UseSwagger();
     app.UseSwaggerUI();
 }

@@ -51,7 +51,7 @@ public class NetworkMonitorDbContext : DbContext
 
             entity.HasOne(d => d.Device).WithMany(p => p.MonitoringJobs)
                 .HasForeignKey(d => d.DeviceId)
-                .HasConstraintName("FK_Jobs_Devices");
+                .HasConstraintName("FK_MonitoringJobs_Devices");
         });
 
         // Configure RawMetric relationships
@@ -59,7 +59,7 @@ public class NetworkMonitorDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("RawMetrics_pkey");
 
-            entity.HasIndex(e => e.JobId, "IX_Devices_AgentId");
+            entity.HasIndex(e => e.JobId, "IX_RawMetrics_JobId");
 
             entity.HasIndex(e => new { e.JobId, e.Timestamp }, "IX_RawMetrics_JobId_Timestamp").IsDescending(false, true);
 
@@ -67,13 +67,13 @@ public class NetworkMonitorDbContext : DbContext
 
             entity.HasOne(d => d.Job).WithMany(p => p.RawMetrics)
                 .HasForeignKey(d => d.JobId)
-                .HasConstraintName("FK_Metrics_Jobs");
+                .HasConstraintName("FK_RawMetrics_MonitoringJobs");
         });
 
         // Configure NetworkScan
         modelBuilder.Entity<NetworkScan>(entity =>
         {
-            entity.HasKey(e => e.Id);
+            entity.HasKey(e => e.Id).HasName("NetworkScans_pkey");
             entity.Property(e => e.StartTime).IsRequired();
             entity.HasIndex(e => e.StartTime);
         });
@@ -81,7 +81,7 @@ public class NetworkMonitorDbContext : DbContext
         // Configure DeviceHistory
         modelBuilder.Entity<DeviceHistory>(entity =>
         {
-            entity.HasKey(e => e.Id);
+            entity.HasKey(e => e.Id).HasName("DeviceHistories_pkey");
             entity.Property(e => e.Timestamp).IsRequired();
             entity.Property(e => e.Status).IsRequired();
             entity.HasIndex(e => e.DeviceId);
