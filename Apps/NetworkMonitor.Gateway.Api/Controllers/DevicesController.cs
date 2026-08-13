@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using NetworkMonitor.Domain;
+using NetworkMonitor.Application.Devices;
 using NetworkMonitor.Gateway.Api;
-using NetworkMonitor.Infrastructure.Data.Context;
 
 namespace NetworkMonitor.Gateway.Api.Controllers
 {
@@ -10,17 +8,17 @@ namespace NetworkMonitor.Gateway.Api.Controllers
     [Route("api/[controller]")]
     public class DevicesController : ControllerBase
     {
-        private readonly NetworkMonitorDbContext _dbContext;
+        private readonly IDeviceService _deviceService;
         private readonly ILogger<DevicesController> _logger;
         private readonly INetworkScanService _networkScanService;
 
         public DevicesController(
-            NetworkMonitorDbContext dbContext,
+            IDeviceService deviceService,
             ILogger<DevicesController> logger,
             INetworkScanService networkScanService)
         {
             _networkScanService = networkScanService;
-            _dbContext = dbContext;
+            _deviceService = deviceService;
             _logger = logger;
         }
 
@@ -29,10 +27,7 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var devices = await _dbContext.Devices
-                    .AsNoTracking()
-                    .ToListAsync();
-
+                var devices = await _deviceService.GetAllDevicesAsync();
                 return Ok(devices);
             }
             catch (Exception ex)
@@ -47,24 +42,12 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var device = await _dbContext.Devices
-                    .Include(d => d.MonitoringJobs)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(d => d.Id == id);
+                var device = await _deviceService.GetDeviceByIdAsync(id);
 
                 if (device == null)
                     return NotFound("Device not found");
 
-                return Ok(new
-                {
-                    device.Id,
-                    device.AgentId,
-                    device.DisplayName,
-                    device.IpAddress,
-                    device.Status,
-                    device.OperatingSystem,
-                    jobCount = device.MonitoringJobs.Count
-                });
+                return Ok(device);
             }
             catch (Exception ex)
             {
@@ -93,10 +76,7 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var scans = await _dbContext.NetworkScans
-                    .AsNoTracking()
-                    .ToListAsync();
-
+                var scans = await _deviceService.GetScanHistoryAsync();
                 return Ok(scans);
             }
             catch (Exception ex)

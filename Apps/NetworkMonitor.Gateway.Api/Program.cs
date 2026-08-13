@@ -1,5 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using NetworkMonitor.Application.Devices;
+using NetworkMonitor.Application.MonitoringJobs;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Infrastructure.Data.Context;
@@ -20,6 +22,8 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<INetworkDiscoveryService, NetworkDiscoveryService>();
 builder.Services.AddScoped<INetworkScanService, NetworkScanService>();
+builder.Services.AddScoped<IDeviceService, DeviceService>();
+builder.Services.AddScoped<IMonitoringJobService, MonitoringJobService>();
 builder.Services.AddHostedService<PeriodicNetworkScanWorker>();
 var allowInsecureTls = builder.Configuration.GetValue<bool>("NetworkMonitor:AllowSelfSignedCertificates");
 builder.Services.AddHttpClient("MonitorClient", client =>

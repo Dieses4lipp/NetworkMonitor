@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>NetworkMonitor.Application</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\NetworkMonitor.Domain\NetworkMonitor.Domain.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NetworkMonitor.Infrastructure.Data\NetworkMonitor.Infrastructure.Data.csproj" />
+  </ItemGroup>
+
+</Project>

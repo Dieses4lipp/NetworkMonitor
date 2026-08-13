@@ -1,7 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
+using NetworkMonitor.Application.MonitoringJobs;
 using NetworkMonitor.Domain;
-using NetworkMonitor.Infrastructure.Data.Context;
 
 namespace NetworkMonitor.Gateway.Api.Controllers
 {
@@ -9,12 +8,12 @@ namespace NetworkMonitor.Gateway.Api.Controllers
     [Route("api/jobs")]
     public class MonitoringJobController : ControllerBase
     {
-        private readonly NetworkMonitorDbContext _dbContext;
+        private readonly IMonitoringJobService _jobService;
         private readonly ILogger<MonitoringJobController> _logger;
 
-        public MonitoringJobController(NetworkMonitorDbContext dbContext, ILogger<MonitoringJobController> logger)
+        public MonitoringJobController(IMonitoringJobService jobService, ILogger<MonitoringJobController> logger)
         {
-            _dbContext = dbContext;
+            _jobService = jobService;
             _logger = logger;
         }
 
@@ -23,22 +22,11 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var deviceExists = await _dbContext.Devices.AnyAsync(d => d.Id == request.DeviceId);
-                if (!deviceExists)
+                var result = await _jobService.CreateJobAsync(request);
+                if (!result.DeviceExists)
                     return BadRequest($"Device with ID {request.DeviceId} not found.");
 
-                var job = new MonitoringJob
-                {
-                    DeviceId = request.DeviceId,
-                    Type = request.Type,
-                    IntervalSeconds = request.IntervalSeconds,
-                    ConfigurationJson = request.ConfigurationJson
-                };
-
-                _dbContext.MonitoringJobs.Add(job);
-                await _dbContext.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetJobById), new { id = job.Id }, job);
+                return CreatedAtAction(nameof(GetJobById), new { id = result.Job!.Id }, result.Job);
             }
             catch (Exception ex)
             {
@@ -52,19 +40,9 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var job = await _dbContext.MonitoringJobs.FindAsync(id);
+                var job = await _jobService.UpdateJobAsync(id, request);
                 if (job == null)
                     return NotFound($"Job with ID {id} not found.");
-
-                if (request.IntervalSeconds.HasValue)
-                    job.IntervalSeconds = request.IntervalSeconds.Value;
-
-                if (request.ConfigurationJson != null)
-                    job.ConfigurationJson = request.ConfigurationJson;
-                if (request.Type.HasValue)
-                    job.Type = request.Type.Value;
-
-                await _dbContext.SaveChangesAsync();
 
                 return Ok(job);
             }
@@ -80,7 +58,7 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var job = await _dbContext.MonitoringJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == id);
+                var job = await _jobService.GetJobByIdAsync(id);
                 if (job == null) return NotFound();
                 return Ok(job);
             }
@@ -96,7 +74,7 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             var types = Enum.GetValues<MonitoringJobType>()
             .Select(t => new { Id = (int)t, Name = t.ToString() });
-    
+
             return Ok(types);
         }
 
@@ -105,13 +83,9 @@ namespace NetworkMonitor.Gateway.Api.Controllers
         {
             try
             {
-                var job = await _dbContext.MonitoringJobs.FindAsync(id);
-
-                if (job == null)
+                var deleted = await _jobService.DeleteJobAsync(id);
+                if (!deleted)
                     return NotFound($"Job with ID {id} not found.");
-
-                _dbContext.MonitoringJobs.Remove(job);
-                await _dbContext.SaveChangesAsync();
 
                 return NoContent();
             }
@@ -122,16 +96,4 @@ namespace NetworkMonitor.Gateway.Api.Controllers
             }
         }
     }
-    public record CreateJobRequest(
-        int DeviceId,
-        MonitoringJobType Type,
-        int IntervalSeconds,
-        string? ConfigurationJson
-    );
-
-    public record UpdateJobRequest(
-        MonitoringJobType? Type,
-        int? IntervalSeconds,
-        string? ConfigurationJson
-    );
 }
