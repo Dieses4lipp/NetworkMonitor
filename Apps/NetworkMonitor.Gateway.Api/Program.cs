@@ -22,6 +22,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<INetworkDiscoveryService, NetworkDiscoveryService>();
 builder.Services.AddScoped<INetworkScanService, NetworkScanService>();
+builder.Services.AddSingleton<IPlatformClassificationService, PlatformClassificationService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IMonitoringJobService, MonitoringJobService>();
 builder.Services.AddHostedService<PeriodicNetworkScanWorker>();

@@ -17,5 +17,8 @@ public partial class Device
 
     public virtual Agent Agent { get; set; } = null!;
     public string? OperatingSystem { get; set; }
+    public PlatformType PlatformType { get; set; } = PlatformType.Unknown;
+    public string? Vendor { get; set; }
+    public DateTime? LastFingerprintedAt { get; set; }
     public virtual ICollection<MonitoringJob> MonitoringJobs { get; set; } = new List<MonitoringJob>();
 }
