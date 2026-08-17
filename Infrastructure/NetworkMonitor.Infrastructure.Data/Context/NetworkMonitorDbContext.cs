@@ -21,6 +21,8 @@ public class NetworkMonitorDbContext : DbContext
     public virtual DbSet<RawMetric> RawMetrics { get; set; }
     public virtual DbSet<NetworkScan> NetworkScans { get; set; }
     public virtual DbSet<DeviceHistory> DeviceHistories { get; set; }
+    public virtual DbSet<HostedWorkload> HostedWorkloads { get; set; }
+    public virtual DbSet<ServiceUnit> ServiceUnits { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +88,32 @@ public class NetworkMonitorDbContext : DbContext
             entity.Property(e => e.Status).IsRequired();
             entity.HasIndex(e => e.DeviceId);
             entity.HasIndex(e => e.ScanId);
+        });
+
+        // Configure HostedWorkload
+        modelBuilder.Entity<HostedWorkload>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("HostedWorkloads_pkey");
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => new { e.DeviceId, e.ExternalId, e.Source }).IsUnique();
+
+            entity.HasOne(d => d.Device).WithMany(p => p.HostedWorkloads)
+                .HasForeignKey(d => d.DeviceId)
+                .HasConstraintName("FK_HostedWorkloads_Devices")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure ServiceUnit
+        modelBuilder.Entity<ServiceUnit>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("ServiceUnits_pkey");
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => new { e.DeviceId, e.UnitName, e.Source }).IsUnique();
+
+            entity.HasOne(d => d.Device).WithMany(p => p.ServiceUnits)
+                .HasForeignKey(d => d.DeviceId)
+                .HasConstraintName("FK_ServiceUnits_Devices")
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         base.OnModelCreating(modelBuilder);

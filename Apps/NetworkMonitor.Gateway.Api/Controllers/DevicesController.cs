@@ -71,6 +71,36 @@ namespace NetworkMonitor.Gateway.Api.Controllers
             }
         }
 
+        [HttpGet("{id}/workloads")]
+        public async Task<IActionResult> GetWorkloads(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var workloads = await _deviceService.GetWorkloadsAsync(id, cancellationToken);
+                return Ok(workloads);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving workloads");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/services")]
+        public async Task<IActionResult> GetServices(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var services = await _deviceService.GetServiceUnitsAsync(id, cancellationToken);
+                return Ok(services);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving services");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("scans")]
         public async Task<IActionResult> GetScanHistory()
         {

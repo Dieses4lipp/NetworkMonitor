@@ -21,4 +21,6 @@ public partial class Device
     public string? Vendor { get; set; }
     public DateTime? LastFingerprintedAt { get; set; }
     public virtual ICollection<MonitoringJob> MonitoringJobs { get; set; } = new List<MonitoringJob>();
+    public virtual ICollection<HostedWorkload> HostedWorkloads { get; set; } = new List<HostedWorkload>();
+    public virtual ICollection<ServiceUnit> ServiceUnits { get; set; } = new List<ServiceUnit>();
 }

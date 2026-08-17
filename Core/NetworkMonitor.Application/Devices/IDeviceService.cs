@@ -18,4 +18,8 @@ public interface IDeviceService
     Task<DeviceDetailsDto?> GetDeviceByIdAsync(int id, CancellationToken cancellationToken = default);
 
     Task<List<NetworkScan>> GetScanHistoryAsync(CancellationToken cancellationToken = default);
+
+    Task<List<HostedWorkload>> GetWorkloadsAsync(int deviceId, CancellationToken cancellationToken = default);
+
+    Task<List<ServiceUnit>> GetServiceUnitsAsync(int deviceId, CancellationToken cancellationToken = default);
 }

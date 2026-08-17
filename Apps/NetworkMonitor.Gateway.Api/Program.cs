@@ -4,6 +4,7 @@ using NetworkMonitor.Application.Devices;
 using NetworkMonitor.Application.MonitoringJobs;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
+using NetworkMonitor.Gateway.Api.PlatformInspection;
 using NetworkMonitor.Infrastructure.Data.Context;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,19 @@ builder.Services.AddHttpClient("MonitorClient", client =>
             : null
     });
 builder.Services.AddSingleton<IVendorLookupService, VendorLookupService>();
+builder.Services.AddSingleton<IHostFingerprintService, HostFingerprintService>();
+builder.Services.AddHttpClient("ProxmoxClient", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+})
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = allowInsecureTls
+            ? (message, cert, chain, errors) => true
+            : null
+    });
+builder.Services.Configure<ProxmoxOptions>(builder.Configuration.GetSection("Proxmox"));
+builder.Services.AddScoped<IPlatformInspector, ProxmoxInspector>();
 builder.Services.AddHostedService<JobExecutionWorker>();
 builder.Services.AddSwaggerGen();
 

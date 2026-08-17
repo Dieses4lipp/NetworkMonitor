@@ -46,4 +46,20 @@ public class DeviceService : IDeviceService
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<List<HostedWorkload>> GetWorkloadsAsync(int deviceId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.HostedWorkloads
+            .AsNoTracking()
+            .Where(w => w.DeviceId == deviceId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<ServiceUnit>> GetServiceUnitsAsync(int deviceId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.ServiceUnits
+            .AsNoTracking()
+            .Where(s => s.DeviceId == deviceId)
+            .ToListAsync(cancellationToken);
+    }
 }
