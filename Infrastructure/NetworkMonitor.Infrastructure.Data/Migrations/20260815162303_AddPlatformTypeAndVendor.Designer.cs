@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetworkMonitor.Infrastructure.Data.Context;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NetworkMonitor.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(NetworkMonitorDbContext))]
-    partial class NetworkMonitorDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260815162303_AddPlatformTypeAndVendor")]
+    partial class AddPlatformTypeAndVendor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -120,51 +123,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                     b.ToTable("DeviceHistories");
                 });
 
-            modelBuilder.Entity("NetworkMonitor.Domain.HostedWorkload", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ExternalId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("ReportedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id")
-                        .HasName("HostedWorkloads_pkey");
-
-                    b.HasIndex("DeviceId");
-
-                    b.HasIndex("DeviceId", "ExternalId", "Source")
-                        .IsUnique();
-
-                    b.ToTable("HostedWorkloads");
-                });
-
             modelBuilder.Entity("NetworkMonitor.Domain.MonitoringJob", b =>
                 {
                     b.Property<int>("Id")
@@ -263,46 +221,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                     b.ToTable("RawMetrics");
                 });
 
-            modelBuilder.Entity("NetworkMonitor.Domain.ServiceUnit", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ActiveState")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ReportedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SubState")
-                        .HasColumnType("text");
-
-                    b.Property<string>("UnitName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id")
-                        .HasName("ServiceUnits_pkey");
-
-                    b.HasIndex("DeviceId");
-
-                    b.HasIndex("DeviceId", "UnitName", "Source")
-                        .IsUnique();
-
-                    b.ToTable("ServiceUnits");
-                });
-
             modelBuilder.Entity("NetworkMonitor.Domain.Device", b =>
                 {
                     b.HasOne("NetworkMonitor.Domain.Agent", "Agent")
@@ -313,18 +231,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                         .HasConstraintName("FK_Devices_Agents");
 
                     b.Navigation("Agent");
-                });
-
-            modelBuilder.Entity("NetworkMonitor.Domain.HostedWorkload", b =>
-                {
-                    b.HasOne("NetworkMonitor.Domain.Device", "Device")
-                        .WithMany("HostedWorkloads")
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_HostedWorkloads_Devices");
-
-                    b.Navigation("Device");
                 });
 
             modelBuilder.Entity("NetworkMonitor.Domain.MonitoringJob", b =>
@@ -351,18 +257,6 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
                     b.Navigation("Job");
                 });
 
-            modelBuilder.Entity("NetworkMonitor.Domain.ServiceUnit", b =>
-                {
-                    b.HasOne("NetworkMonitor.Domain.Device", "Device")
-                        .WithMany("ServiceUnits")
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_ServiceUnits_Devices");
-
-                    b.Navigation("Device");
-                });
-
             modelBuilder.Entity("NetworkMonitor.Domain.Agent", b =>
                 {
                     b.Navigation("Devices");
@@ -370,11 +264,7 @@ namespace NetworkMonitor.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("NetworkMonitor.Domain.Device", b =>
                 {
-                    b.Navigation("HostedWorkloads");
-
                     b.Navigation("MonitoringJobs");
-
-                    b.Navigation("ServiceUnits");
                 });
 
             modelBuilder.Entity("NetworkMonitor.Domain.MonitoringJob", b =>
