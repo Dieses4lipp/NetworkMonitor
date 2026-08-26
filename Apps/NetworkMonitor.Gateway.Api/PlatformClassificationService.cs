@@ -18,9 +18,9 @@ namespace NetworkMonitor.Gateway.Api
     {
         private static readonly (Func<PlatformClassificationInput, bool> Matches, PlatformType Platform)[] Rules =
         {
-            (i => i.RespondedPorts?.Contains(8006) == true, PlatformType.ProxmoxVe),
-            (i => i.RespondedPorts?.Contains(5000) == true || i.RespondedPorts?.Contains(5001) == true, PlatformType.Synology),
-            (i => i.RespondedPorts?.Contains(8123) == true, PlatformType.HomeAssistant),
+            (i => i.RespondedPorts?.Contains(KnownServicePorts.ProxmoxVe) == true, PlatformType.ProxmoxVe),
+            (i => i.RespondedPorts?.Contains(KnownServicePorts.SynologyHttp) == true || i.RespondedPorts?.Contains(KnownServicePorts.SynologyHttps) == true, PlatformType.Synology),
+            (i => i.RespondedPorts?.Contains(KnownServicePorts.HomeAssistant) == true, PlatformType.HomeAssistant),
 
             (i => ContainsIgnoreCase(i.SshBanner, "ubuntu"), PlatformType.Ubuntu),
             (i => ContainsIgnoreCase(i.SshBanner, "debian"), PlatformType.Debian),

@@ -12,7 +12,7 @@ namespace NetworkMonitor.Gateway.Api
 
     public class HostFingerprintService : IHostFingerprintService
     {
-        private static readonly int[] ProbePorts = { 22, 8006, 5000, 5001, 8123 };
+        private static readonly int[] ProbePorts = KnownServicePorts.All;
         private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(2);
 
         private readonly ILogger<HostFingerprintService> _logger;
@@ -34,7 +34,7 @@ namespace NetworkMonitor.Gateway.Api
             {
                 if (!result.Open) continue;
                 respondedPorts.Add(result.Port);
-                if (result.Port == 22 && result.Banner != null)
+                if (result.Port == KnownServicePorts.Ssh && result.Banner != null)
                     sshBanner = result.Banner;
             }
 
@@ -52,7 +52,7 @@ namespace NetworkMonitor.Gateway.Api
                 await client.ConnectAsync(ipAddress, port, cts.Token);
 
                 string? banner = null;
-                if (port == 22)
+                if (port == KnownServicePorts.Ssh)
                     banner = await ReadBannerAsync(client, cts.Token);
 
                 return (port, true, banner);

@@ -16,6 +16,7 @@ public partial class Device
     public int Status { get; set; }
 
     public virtual Agent Agent { get; set; } = null!;
+    public string? Hostname { get; set; }
     public string? OperatingSystem { get; set; }
     public PlatformType PlatformType { get; set; } = PlatformType.Unknown;
     public string? Vendor { get; set; }
