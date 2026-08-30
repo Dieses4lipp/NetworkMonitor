@@ -10,9 +10,6 @@ namespace NetworkMonitor.Domain
         Synology = 5,
         Windows = 6,
         MacOS = 7,
-        Esxi = 8,
-        OpnSense = 9,
-        HomeAssistant = 10,
-        UniFi = 11
+        HomeAssistant = 8
     }
 }

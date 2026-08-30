@@ -87,6 +87,7 @@ namespace NetworkMonitor.Gateway.Api
                     {
                         AgentId = SystemConstants.BuiltInAgentId,
                         DisplayName = $"Unknown Device ({ip})",
+                        Hostname = info.HostName,
                         IpAddress = ip,
                         Status = 1,
                         OperatingSystem = info.OperatingSystem,
@@ -98,6 +99,7 @@ namespace NetworkMonitor.Gateway.Api
                 else
                 {
                     device.Status = 1;
+                    device.Hostname = info.HostName;
                     if (info.OperatingSystem != "Unknown")
                         device.OperatingSystem = info.OperatingSystem;
                     device.Vendor = info.Vendor;
@@ -151,7 +153,7 @@ namespace NetworkMonitor.Gateway.Api
 
                     device.PlatformType = _classificationService.Classify(new PlatformClassificationInput(
                         Vendor: device.Vendor,
-                        Hostname: device.DisplayName,
+                        Hostname: device.Hostname,
                         OperatingSystemGuess: device.OperatingSystem,
                         SshBanner: fingerprint.SshBanner,
                         RespondedPorts: fingerprint.RespondedPorts));
