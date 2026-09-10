@@ -62,4 +62,13 @@ public class DeviceService : IDeviceService
             .Where(s => s.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<List<NetworkService>> GetNetworkServicesAsync(int deviceId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.NetworkServices
+            .AsNoTracking()
+            .Where(s => s.DeviceId == deviceId)
+            .OrderBy(s => s.Port)
+            .ToListAsync(cancellationToken);
+    }
 }

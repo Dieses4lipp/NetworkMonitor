@@ -23,6 +23,7 @@ public class NetworkMonitorDbContext : DbContext
     public virtual DbSet<DeviceHistory> DeviceHistories { get; set; }
     public virtual DbSet<HostedWorkload> HostedWorkloads { get; set; }
     public virtual DbSet<ServiceUnit> ServiceUnits { get; set; }
+    public virtual DbSet<NetworkService> NetworkServices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,6 +114,19 @@ public class NetworkMonitorDbContext : DbContext
             entity.HasOne(d => d.Device).WithMany(p => p.ServiceUnits)
                 .HasForeignKey(d => d.DeviceId)
                 .HasConstraintName("FK_ServiceUnits_Devices")
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure NetworkService
+        modelBuilder.Entity<NetworkService>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("NetworkServices_pkey");
+            entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => new { e.DeviceId, e.Port }).IsUnique();
+
+            entity.HasOne(d => d.Device).WithMany(p => p.NetworkServices)
+                .HasForeignKey(d => d.DeviceId)
+                .HasConstraintName("FK_NetworkServices_Devices")
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

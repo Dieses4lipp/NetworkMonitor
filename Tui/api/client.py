@@ -35,6 +35,17 @@ async def fetch_device(device_id: int) -> Optional[dict]:
         return None
 
 
+async def fetch_device_services(device_id: int) -> list[dict]:
+    """GET /api/devices/{id}/services — returns discovered TCP services."""
+    try:
+        response = await get_client().get(f"devices/{device_id}/services")
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        log(f"Error fetching services for device {device_id}: {e}")
+        return []
+
+
 async def fetch_scans() -> list[dict]:
     """GET /api/devices/scans — returns scan history."""
     try:

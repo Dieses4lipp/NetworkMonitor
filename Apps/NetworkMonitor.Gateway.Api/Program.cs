@@ -5,6 +5,7 @@ using NetworkMonitor.Application.MonitoringJobs;
 using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api;
 using NetworkMonitor.Gateway.Api.PlatformInspection;
+using NetworkMonitor.Gateway.Api.ServiceDiscovery;
 using NetworkMonitor.Infrastructure.Data.Context;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,7 +40,7 @@ builder.Services.AddHttpClient("MonitorClient", client =>
             : null
     });
 builder.Services.AddSingleton<IVendorLookupService, VendorLookupService>();
-builder.Services.AddSingleton<IHostFingerprintService, HostFingerprintService>();
+builder.Services.AddSingleton<IServiceDiscoveryService, ServiceDiscoveryService>();
 builder.Services.AddHttpClient("ProxmoxClient", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(10);
