@@ -28,6 +28,7 @@ from textual.events import Click
 from api.client import (
     create_job,
     delete_job,
+    fetch_device_services,
     fetch_devices,
     fetch_jobs,
     fetch_scans,
@@ -202,6 +203,15 @@ ModalScreen {
     background: #0d1117;
 }
 
+#modal-container.wide {
+    width: 80;
+}
+
+#services-table {
+    height: 14;
+    border: round #30363d;
+}
+
 #modal-buttons {
     layout: horizontal;
     height: auto;
@@ -320,6 +330,65 @@ class NewJobModal(ModalScreen):
 
 
 # ---------------------------------------------------------------------------
+# Services Modal
+# ---------------------------------------------------------------------------
+
+class ServicesModal(ModalScreen):
+    """Modal listing the TCP services discovered on the selected device."""
+
+    BINDINGS = [Binding("escape", "close_modal", "Close", show=False)]
+
+    def __init__(self, device: dict, **kwargs):
+        super().__init__(**kwargs)
+        self.device = device
+
+    def compose(self) -> ComposeResult:
+        name = self.device.get("displayName") or self.device.get("hostname", "Unknown")
+        ip = self.device.get("ipAddress", "")
+        with Vertical(id="modal-container", classes="wide"):
+            yield Label(f"Services — {name} ({ip})")
+            yield DataTable(id="services-table", cursor_type="row", zebra_stripes=False)
+            with Horizontal(id="modal-buttons"):
+                yield Button("Close", variant="default", id="btn-close", classes="-secondary")
+
+    def on_mount(self) -> None:
+        table = self.query_one("#services-table", DataTable)
+        table.add_columns("Port", "Service", "Banner")
+        self._load_services()
+
+    @work(exclusive=True)
+    async def _load_services(self) -> None:
+        device_id = self.device.get("id")
+        services = await fetch_device_services(device_id) if device_id is not None else []
+
+        table = self.query_one("#services-table", DataTable)
+        table.clear()
+
+        if not services:
+            table.add_row(
+                Text("—", style="dim"),
+                Text("no services recorded", style="dim"),
+                Text("—", style="dim"),
+            )
+            return
+
+        for service in services:
+            banner = " ".join((service.get("banner") or "").split())
+            table.add_row(
+                str(service.get("port", "—")),
+                Text(service.get("name") or "Unknown", style="cyan"),
+                Text(banner, style="") if banner else Text("—", style="dim"),
+            )
+
+    def action_close_modal(self) -> None:
+        self.dismiss(None)
+
+    @on(Button.Pressed, "#btn-close")
+    def close(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
 # Main Application
 # ---------------------------------------------------------------------------
 
@@ -332,6 +401,7 @@ class NetworkMonitorApp(App):
     BINDINGS = [
         Binding("s", "scan", "Scan", show=True),
         Binding("n", "new_job", "New Job", show=True),
+        Binding("v", "view_services", "Services", show=True),
         Binding("d", "delete_job", "Delete", show=True),
         Binding("slash", "toggle_filter", "Filter", show=True),
         Binding("1", "show_tab('devices')", "Devices", show=False),
@@ -530,6 +600,20 @@ class NetworkMonitorApp(App):
             
         self.push_screen(NewJobModal(device), _on_close)
 
+    def action_view_services(self) -> None:
+        """Open the Services modal for the currently selected device."""
+        try:
+            device_list = self.query_one("#device-list", DeviceList)
+            device = device_list.get_selected_device()
+        except NoMatches:
+            device = None
+
+        if device is None:
+            self.notify("Select a device first.", severity="warning", timeout=3)
+            return
+
+        self.push_screen(ServicesModal(device))
+
     @work(exclusive=False)
     async def action_delete_job(self) -> None:
         """Delete the selected job (if on jobs tab) or notify."""
@@ -585,8 +669,6 @@ class NetworkMonitorApp(App):
     def on_filter_submitted(self) -> None:
         """Close filter on Enter."""
         self.action_toggle_filter()
-
-        latency = f"{dev.get('latencyMs', 0)} ms"
 
 # ---------------------------------------------------------------------------
 # Entry point

@@ -3,4 +3,5 @@
   <Project Path="Apps/NetworkMonitor.Gateway.Api/NetworkMonitor.Gateway.Api.csproj" />
   <Project Path="Core/NetworkMonitor.Domain/NetworkMonitor.Domain.csproj" Id="96acb359-14fe-4274-bfe1-bac52b64ca7b" />
   <Project Path="Infrastructure/NetworkMonitor.Infrastructure.Data/NetworkMonitor.Infrastructure.Data.csproj" Id="da9e2287-b157-4760-bea5-8d02c68dfcb7" />
+  <Project Path="Tests/NetworkMonitor.Gateway.Api.Tests/NetworkMonitor.Gateway.Api.Tests.csproj" />
 </Solution>

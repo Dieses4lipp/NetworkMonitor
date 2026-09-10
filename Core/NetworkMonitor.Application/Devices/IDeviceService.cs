@@ -22,4 +22,6 @@ public interface IDeviceService
     Task<List<HostedWorkload>> GetWorkloadsAsync(int deviceId, CancellationToken cancellationToken = default);
 
     Task<List<ServiceUnit>> GetServiceUnitsAsync(int deviceId, CancellationToken cancellationToken = default);
+
+    Task<List<NetworkService>> GetNetworkServicesAsync(int deviceId, CancellationToken cancellationToken = default);
 }

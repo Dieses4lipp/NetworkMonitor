@@ -1,5 +1,7 @@
-﻿using NetworkMonitor.Domain;
+﻿using Microsoft.EntityFrameworkCore;
+using NetworkMonitor.Domain;
 using NetworkMonitor.Gateway.Api.PlatformInspection;
+using NetworkMonitor.Gateway.Api.ServiceDiscovery;
 using NetworkMonitor.Infrastructure.Data.Context;
 
 namespace NetworkMonitor.Gateway.Api
@@ -14,7 +16,7 @@ namespace NetworkMonitor.Gateway.Api
         private readonly ILogger<NetworkScanService> _logger;
         private readonly INetworkDiscoveryService _discoveryService;
         private readonly IPlatformClassificationService _classificationService;
-        private readonly IHostFingerprintService _fingerprintService;
+        private readonly IServiceDiscoveryService _serviceDiscoveryService;
         private readonly IEnumerable<IPlatformInspector> _platformInspectors;
         private readonly NetworkMonitorDbContext _dbContext;
         private readonly TimeSpan _fingerprintInterval;
@@ -23,7 +25,7 @@ namespace NetworkMonitor.Gateway.Api
             ILogger<NetworkScanService> logger,
             INetworkDiscoveryService discoveryService,
             IPlatformClassificationService classificationService,
-            IHostFingerprintService fingerprintService,
+            IServiceDiscoveryService serviceDiscoveryService,
             IEnumerable<IPlatformInspector> platformInspectors,
             NetworkMonitorDbContext dbContext,
             IConfiguration configuration)
@@ -31,7 +33,7 @@ namespace NetworkMonitor.Gateway.Api
             _logger = logger;
             _discoveryService = discoveryService;
             _classificationService = classificationService;
-            _fingerprintService = fingerprintService;
+            _serviceDiscoveryService = serviceDiscoveryService;
             _platformInspectors = platformInspectors;
             _dbContext = dbContext;
             var fingerprintMinutes = configuration.GetValue<int?>("NetworkMonitor:FingerprintIntervalMinutes") ?? 30;
@@ -92,8 +94,7 @@ namespace NetworkMonitor.Gateway.Api
                         Status = 1,
                         OperatingSystem = info.OperatingSystem,
                         Vendor = info.Vendor,
-                        PlatformType = platformType,
-                        LastFingerprintedAt = DateTime.UtcNow
+                        PlatformType = platformType
                     });
                 }
                 else
@@ -104,7 +105,6 @@ namespace NetworkMonitor.Gateway.Api
                         device.OperatingSystem = info.OperatingSystem;
                     device.Vendor = info.Vendor;
                     device.PlatformType = platformType;
-                    device.LastFingerprintedAt = DateTime.UtcNow;
 
                     _dbContext.DeviceHistories.Add(new DeviceHistory
                     {
@@ -149,15 +149,17 @@ namespace NetworkMonitor.Gateway.Api
             {
                 try
                 {
-                    var fingerprint = await _fingerprintService.FingerprintAsync(device.IpAddress, cancellationToken);
+                    var services = await _serviceDiscoveryService.ScanAsync(device.IpAddress, cancellationToken);
 
                     device.PlatformType = _classificationService.Classify(new PlatformClassificationInput(
                         Vendor: device.Vendor,
                         Hostname: device.Hostname,
                         OperatingSystemGuess: device.OperatingSystem,
-                        SshBanner: fingerprint.SshBanner,
-                        RespondedPorts: fingerprint.RespondedPorts));
+                        SshBanner: services.FirstOrDefault(s => s.Port == KnownServicePorts.Ssh)?.Banner,
+                        RespondedPorts: services.Select(s => s.Port).ToHashSet()));
                     device.LastFingerprintedAt = now;
+
+                    await PersistNetworkServicesAsync(device, services, cancellationToken);
 
                     var inspector = _platformInspectors.FirstOrDefault(i => i.SupportedPlatform == device.PlatformType);
                     if (inspector != null)
@@ -165,11 +167,48 @@ namespace NetworkMonitor.Gateway.Api
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Fingerprinting failed for device {Ip}", device.IpAddress);
+                    _logger.LogWarning(ex, "Service discovery failed for device {Ip}", device.IpAddress);
                 }
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private async Task PersistNetworkServicesAsync(
+            Device device,
+            IReadOnlyList<DiscoveredService> services,
+            CancellationToken cancellationToken)
+        {
+            var now = DateTime.UtcNow;
+            var stored = await _dbContext.NetworkServices
+                .Where(s => s.DeviceId == device.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var discovered in services)
+            {
+                var existing = stored.FirstOrDefault(s => s.Port == discovered.Port);
+                if (existing == null)
+                {
+                    _dbContext.NetworkServices.Add(new NetworkService
+                    {
+                        DeviceId = device.Id,
+                        Port = discovered.Port,
+                        Name = discovered.Name,
+                        Banner = discovered.Banner,
+                        FirstSeenAt = now,
+                        LastSeenAt = now
+                    });
+                }
+                else
+                {
+                    existing.Name = discovered.Name;
+                    existing.Banner = discovered.Banner;
+                    existing.LastSeenAt = now;
+                }
+            }
+
+            var openPorts = services.Select(s => s.Port).ToHashSet();
+            _dbContext.NetworkServices.RemoveRange(stored.Where(s => !openPorts.Contains(s.Port)));
         }
 
         private async Task InspectAndPersistAsync(Device device, IPlatformInspector inspector, CancellationToken cancellationToken)

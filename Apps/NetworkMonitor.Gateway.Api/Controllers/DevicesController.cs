@@ -86,17 +86,32 @@ namespace NetworkMonitor.Gateway.Api.Controllers
             }
         }
 
-        [HttpGet("{id}/services")]
-        public async Task<IActionResult> GetServices(int id, CancellationToken cancellationToken)
+        [HttpGet("{id}/service-units")]
+        public async Task<IActionResult> GetServiceUnits(int id, CancellationToken cancellationToken)
         {
             try
             {
-                var services = await _deviceService.GetServiceUnitsAsync(id, cancellationToken);
+                var serviceUnits = await _deviceService.GetServiceUnitsAsync(id, cancellationToken);
+                return Ok(serviceUnits);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving service units");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/services")]
+        public async Task<IActionResult> GetNetworkServices(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var services = await _deviceService.GetNetworkServicesAsync(id, cancellationToken);
                 return Ok(services);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving services");
+                _logger.LogError(ex, "Error retrieving network services");
                 return StatusCode(500, new { error = ex.Message });
             }
         }

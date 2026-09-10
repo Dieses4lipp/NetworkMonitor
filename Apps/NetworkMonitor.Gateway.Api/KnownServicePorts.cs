@@ -7,7 +7,5 @@ namespace NetworkMonitor.Gateway.Api
         public const int SynologyHttp = 5000;
         public const int SynologyHttps = 5001;
         public const int HomeAssistant = 8123;
-
-        public static readonly int[] All = { Ssh, ProxmoxVe, SynologyHttp, SynologyHttps, HomeAssistant };
     }
 }
